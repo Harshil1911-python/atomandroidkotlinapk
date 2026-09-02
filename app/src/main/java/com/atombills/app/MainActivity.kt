@@ -7,6 +7,7 @@ import android.app.DownloadManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -14,6 +15,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Base64
 import android.view.View
+import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.webkit.*
 import android.widget.ProgressBar
@@ -70,9 +72,12 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Edge-to-edge with WHITE system bars (battery / status + bottom nav controls)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        window.statusBarColor = Color.WHITE
+        window.navigationBarColor = Color.WHITE
+        applyLightSystemBars()
 
         setContentView(R.layout.activity_main)
         webView = findViewById(R.id.webView)
@@ -85,7 +90,6 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         requestNeededPermissions()
 
-        // Load via rewritten HTML so ?v=20 is stripped and $$ exists before any page script
         loadRewrittenHtml("index.html")
 
         ViewCompat.setOnApplyWindowInsetsListener(webView) { v, insets ->
@@ -95,7 +99,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Read HTML from assets, strip cache-busting query strings, inject $/$ $ polyfill first. */
+    /** Dark icons on white status / nav bars. */
+    private fun applyLightSystemBars() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.setSystemBarsAppearance(
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                    WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                    WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            var flags = window.decorView.systemUiVisibility
+            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            }
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = flags
+        }
+    }
+
     private fun loadRewrittenHtml(assetName: String) {
         try {
             val raw = assets.open(assetName).bufferedReader().use { it.readText() }
@@ -113,19 +137,67 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Strip cache-buster queries and inject $ / $$ BEFORE any page script.
+     * Uses bracket notation so Kotlin string templates never corrupt the JS.
+     */
     private fun rewriteHtml(raw: String): String {
-        // Strip ?v=20 (and any ?v=digits) from script/link/href/src so file:// assets resolve
-        var html = raw.replace(Regex("""(\.(?:js|css|png|jpg|jpeg|svg|mp3|webmanifest|html))\?v=\d+"""), "$1")
-        // Also strip bare ?v= on sw.js etc.
-        html = html.replace(Regex("""\?v=\d+"""), "")
-        // Inject polyfill as the very first thing in <head> so inline scripts never see undefined $$
-        val polyfill = """<script>window.\$=window.\$||function(s){return document.querySelector(s)};window.\$\$=window.\$\$||function(s){return document.querySelectorAll(s)};window.isAndroidApp=true;window.AndroidBridgeReady=true;</script>"""
+        var html = raw.replace(Regex("""\?v=\d+"""), "")
+        // Avoid Kotlin $ interpolation entirely: build selectors via String.fromCharCode(36) == '$'
+        val polyfill = """
+            <script>
+            (function(){
+              var d = String.fromCharCode(36);
+              var w = window;
+              if (typeof w[d] !== 'function') {
+                w[d] = function(s){ return document.querySelector(s); };
+              }
+              if (typeof w[d+d] !== 'function') {
+                w[d+d] = function(s){ return document.querySelectorAll(s); };
+              }
+              w.isAndroidApp = true;
+              w.AndroidBridgeReady = true;
+            })();
+            </script>
+            """.trimIndent()
         html = if (html.contains("<head>", ignoreCase = true)) {
             html.replaceFirst(Regex("(?i)<head>"), "<head>$polyfill")
         } else {
             polyfill + html
         }
         return html
+    }
+
+    private fun polyfillJs(): String {
+        // Same safe technique for evaluateJavascript
+        return """
+            (function(){
+              var d = String.fromCharCode(36);
+              var w = window;
+              if (typeof w[d] !== 'function') {
+                w[d] = function(s){ return document.querySelector(s); };
+              }
+              if (typeof w[d+d] !== 'function') {
+                w[d+d] = function(s){ return document.querySelectorAll(s); };
+              }
+              w.isAndroidApp = true;
+              w.AndroidBridgeReady = true;
+              if (w.AndroidBridge && !w.__atomSharePatched) {
+                w.__atomSharePatched = true;
+                var origShare = w.sharePngDataUrl;
+                w.sharePngDataUrl = async function(dataUrl, filename) {
+                  try {
+                    if (w.AndroidBridge && dataUrl) {
+                      AndroidBridge.saveBase64AndShare(dataUrl, filename || 'invoice.png', 'image/png');
+                      return true;
+                    }
+                  } catch (e) {}
+                  if (typeof origShare === 'function') return origShare(dataUrl, filename);
+                  return false;
+                };
+              }
+            })();
+            """.trimIndent()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -166,61 +238,14 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 progressBar.visibility = View.VISIBLE
-                view?.evaluateJavascript(
-                    """
-                    (function(){
-                      if (typeof window.\$ !== 'function') {
-                        window.\$ = function(s){ return document.querySelector(s); };
-                      }
-                      if (typeof window.\$\$ !== 'function') {
-                        window.\$\$ = function(s){ return document.querySelectorAll(s); };
-                      }
-                      window.isAndroidApp = true;
-                      window.AndroidBridgeReady = true;
-                    })();
-                    """.trimIndent(),
-                    null
-                )
+                view?.evaluateJavascript(polyfillJs(), null)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 progressBar.visibility = View.GONE
-                view?.evaluateJavascript(
-                    """
-                    (function(){
-                      window.isAndroidApp = true;
-                      window.AndroidBridgeReady = true;
-                      if (typeof window.\$ !== 'function') {
-                        window.\$ = function(s){ return document.querySelector(s); };
-                      }
-                      if (typeof window.\$\$ !== 'function') {
-                        window.\$\$ = function(s){ return document.querySelectorAll(s); };
-                      }
-                      if (window.AndroidBridge && !window.__atomSharePatched) {
-                        window.__atomSharePatched = true;
-                        var origShare = window.sharePngDataUrl;
-                        window.sharePngDataUrl = async function(dataUrl, filename) {
-                          try {
-                            if (window.AndroidBridge && dataUrl) {
-                              AndroidBridge.saveBase64AndShare(dataUrl, filename || 'invoice.png', 'image/png');
-                              return true;
-                            }
-                          } catch (e) {}
-                          if (typeof origShare === 'function') return origShare(dataUrl, filename);
-                          return false;
-                        };
-                      }
-                    })();
-                    """.trimIndent(),
-                    null
-                )
+                view?.evaluateJavascript(polyfillJs(), null)
             }
 
-            /**
-             * Serve every android_asset request ourselves:
-             * - HTML: rewrite (strip ?v=, inject polyfill)
-             * - JS/CSS/etc with ?v=: open clean path
-             */
             override fun shouldInterceptRequest(
                 view: WebView?,
                 request: WebResourceRequest?
@@ -239,16 +264,14 @@ class MainActivity : AppCompatActivity() {
                     if (assetPath.endsWith(".html", true) || assetPath.endsWith(".htm", true)) {
                         val raw = assets.open(assetPath).bufferedReader().use { it.readText() }
                         val rewritten = rewriteHtml(raw)
-                        val bytes = rewritten.toByteArray(Charsets.UTF_8)
                         WebResourceResponse(
                             "text/html",
                             "UTF-8",
-                            ByteArrayInputStream(bytes)
+                            ByteArrayInputStream(rewritten.toByteArray(Charsets.UTF_8))
                         )
                     } else {
                         val mime = guessMime(assetPath)
-                        val stream = assets.open(assetPath)
-                        WebResourceResponse(mime, "UTF-8", stream)
+                        WebResourceResponse(mime, "UTF-8", assets.open(assetPath))
                     }
                 } catch (e: Exception) {
                     android.util.Log.w("AtomBills", "Asset intercept failed for $uri ($assetPath): ${e.message}")
@@ -269,8 +292,11 @@ class MainActivity : AppCompatActivity() {
                 return try {
                     if (assetPath.endsWith(".html", true)) {
                         val raw = assets.open(assetPath).bufferedReader().use { it.readText() }
-                        val rewritten = rewriteHtml(raw)
-                        WebResourceResponse("text/html", "UTF-8", ByteArrayInputStream(rewritten.toByteArray(Charsets.UTF_8)))
+                        WebResourceResponse(
+                            "text/html",
+                            "UTF-8",
+                            ByteArrayInputStream(rewriteHtml(raw).toByteArray(Charsets.UTF_8))
+                        )
                     } else {
                         WebResourceResponse(guessMime(assetPath), "UTF-8", assets.open(assetPath))
                     }
@@ -291,7 +317,6 @@ class MainActivity : AppCompatActivity() {
                         }
                         true
                     }
-                    // In-app HTML navigation: always serve rewritten page
                     url.startsWith("file:///android_asset/") &&
                         (url.contains(".html") || url.endsWith("android_asset/") || url.endsWith("android_asset")) -> {
                         val name = url.substringAfter("file:///android_asset/")
