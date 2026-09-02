@@ -25,6 +25,7 @@ import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -84,13 +85,47 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         requestNeededPermissions()
 
-        webView.loadUrl("file:///android_asset/index.html")
+        // Load via rewritten HTML so ?v=20 is stripped and $$ exists before any page script
+        loadRewrittenHtml("index.html")
 
         ViewCompat.setOnApplyWindowInsetsListener(webView) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             insets
         }
+    }
+
+    /** Read HTML from assets, strip cache-busting query strings, inject $/$ $ polyfill first. */
+    private fun loadRewrittenHtml(assetName: String) {
+        try {
+            val raw = assets.open(assetName).bufferedReader().use { it.readText() }
+            val html = rewriteHtml(raw)
+            webView.loadDataWithBaseURL(
+                "file:///android_asset/",
+                html,
+                "text/html",
+                "UTF-8",
+                "file:///android_asset/$assetName"
+            )
+        } catch (e: Exception) {
+            android.util.Log.e("AtomBills", "loadRewrittenHtml failed: ${e.message}")
+            webView.loadUrl("file:///android_asset/$assetName")
+        }
+    }
+
+    private fun rewriteHtml(raw: String): String {
+        // Strip ?v=20 (and any ?v=digits) from script/link/href/src so file:// assets resolve
+        var html = raw.replace(Regex("""(\.(?:js|css|png|jpg|jpeg|svg|mp3|webmanifest|html))\?v=\d+"""), "$1")
+        // Also strip bare ?v= on sw.js etc.
+        html = html.replace(Regex("""\?v=\d+"""), "")
+        // Inject polyfill as the very first thing in <head> so inline scripts never see undefined $$
+        val polyfill = """<script>window.\$=window.\$||function(s){return document.querySelector(s)};window.\$\$=window.\$\$||function(s){return document.querySelectorAll(s)};window.isAndroidApp=true;window.AndroidBridgeReady=true;</script>"""
+        html = if (html.contains("<head>", ignoreCase = true)) {
+            html.replaceFirst(Regex("(?i)<head>"), "<head>$polyfill")
+        } else {
+            polyfill + html
+        }
+        return html
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -102,7 +137,7 @@ class MainActivity : AppCompatActivity() {
         s.allowFileAccess = true
         s.allowContentAccess = true
         s.mediaPlaybackRequiresUserGesture = false
-        s.cacheMode = WebSettings.LOAD_DEFAULT
+        s.cacheMode = WebSettings.LOAD_NO_CACHE
         s.useWideViewPort = true
         s.loadWithOverviewMode = true
         s.setSupportZoom(false)
@@ -131,15 +166,14 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 progressBar.visibility = View.VISIBLE
-                // Inject $ / $$ polyfill ASAP so inline scripts never see "$$ is not defined"
                 view?.evaluateJavascript(
                     """
                     (function(){
-                      if (typeof window.$ !== 'function') {
-                        window.$ = function(s){ return document.querySelector(s); };
+                      if (typeof window.\$ !== 'function') {
+                        window.\$ = function(s){ return document.querySelector(s); };
                       }
-                      if (typeof window.$$ !== 'function') {
-                        window.$$ = function(s){ return document.querySelectorAll(s); };
+                      if (typeof window.\$\$ !== 'function') {
+                        window.\$\$ = function(s){ return document.querySelectorAll(s); };
                       }
                       window.isAndroidApp = true;
                       window.AndroidBridgeReady = true;
@@ -156,11 +190,11 @@ class MainActivity : AppCompatActivity() {
                     (function(){
                       window.isAndroidApp = true;
                       window.AndroidBridgeReady = true;
-                      if (typeof window.$ !== 'function') {
-                        window.$ = function(s){ return document.querySelector(s); };
+                      if (typeof window.\$ !== 'function') {
+                        window.\$ = function(s){ return document.querySelector(s); };
                       }
-                      if (typeof window.$$ !== 'function') {
-                        window.$$ = function(s){ return document.querySelectorAll(s); };
+                      if (typeof window.\$\$ !== 'function') {
+                        window.\$\$ = function(s){ return document.querySelectorAll(s); };
                       }
                       if (window.AndroidBridge && !window.__atomSharePatched) {
                         window.__atomSharePatched = true;
@@ -183,8 +217,9 @@ class MainActivity : AppCompatActivity() {
             }
 
             /**
-             * Strip ?v=20 (and any query / fragment) from file:///android_asset/ URLs so
-             * common.js?v=20 and common.css?v=20 load correctly from assets.
+             * Serve every android_asset request ourselves:
+             * - HTML: rewrite (strip ?v=, inject polyfill)
+             * - JS/CSS/etc with ?v=: open clean path
              */
             override fun shouldInterceptRequest(
                 view: WebView?,
@@ -193,35 +228,52 @@ class MainActivity : AppCompatActivity() {
                 val uri = request?.url ?: return super.shouldInterceptRequest(view, request)
                 if (uri.scheme != "file") return super.shouldInterceptRequest(view, request)
                 val path = uri.path ?: return super.shouldInterceptRequest(view, request)
-                // Only handle android_asset paths that have a query (e.g. ?v=20)
-                if (!path.contains("/android_asset/") || (uri.query.isNullOrEmpty() && uri.fragment.isNullOrEmpty())) {
-                    return super.shouldInterceptRequest(view, request)
-                }
+                if (!path.contains("/android_asset/")) return super.shouldInterceptRequest(view, request)
+
+                val assetPath = path.substringAfter("/android_asset/")
+                    .substringBefore("?")
+                    .substringBefore("#")
+                if (assetPath.isBlank()) return super.shouldInterceptRequest(view, request)
+
                 return try {
-                    val assetPath = path.substringAfter("/android_asset/")
-                    val cleanPath = assetPath.substringBefore("?").substringBefore("#")
-                    val mime = guessMime(cleanPath)
-                    val stream = assets.open(cleanPath)
-                    WebResourceResponse(mime, "UTF-8", stream)
+                    if (assetPath.endsWith(".html", true) || assetPath.endsWith(".htm", true)) {
+                        val raw = assets.open(assetPath).bufferedReader().use { it.readText() }
+                        val rewritten = rewriteHtml(raw)
+                        val bytes = rewritten.toByteArray(Charsets.UTF_8)
+                        WebResourceResponse(
+                            "text/html",
+                            "UTF-8",
+                            ByteArrayInputStream(bytes)
+                        )
+                    } else {
+                        val mime = guessMime(assetPath)
+                        val stream = assets.open(assetPath)
+                        WebResourceResponse(mime, "UTF-8", stream)
+                    }
                 } catch (e: Exception) {
-                    android.util.Log.w("AtomBills", "Asset intercept failed for $uri: ${e.message}")
+                    android.util.Log.w("AtomBills", "Asset intercept failed for $uri ($assetPath): ${e.message}")
                     super.shouldInterceptRequest(view, request)
                 }
             }
 
             @Deprecated("Deprecated in Java")
             override fun shouldInterceptRequest(view: WebView?, url: String?): WebResourceResponse? {
-                if (url == null || !url.startsWith("file://") || !url.contains("?")) {
+                if (url == null || !url.startsWith("file://")) {
                     return super.shouldInterceptRequest(view, url)
                 }
+                val path = Uri.parse(url).path ?: return super.shouldInterceptRequest(view, url)
+                if (!path.contains("/android_asset/")) return super.shouldInterceptRequest(view, url)
+                val assetPath = path.substringAfter("/android_asset/")
+                    .substringBefore("?")
+                    .substringBefore("#")
                 return try {
-                    val path = Uri.parse(url).path ?: return super.shouldInterceptRequest(view, url)
-                    if (!path.contains("/android_asset/")) return super.shouldInterceptRequest(view, url)
-                    val assetPath = path.substringAfter("/android_asset/")
-                    val cleanPath = assetPath.substringBefore("?").substringBefore("#")
-                    val mime = guessMime(cleanPath)
-                    val stream = assets.open(cleanPath)
-                    WebResourceResponse(mime, "UTF-8", stream)
+                    if (assetPath.endsWith(".html", true)) {
+                        val raw = assets.open(assetPath).bufferedReader().use { it.readText() }
+                        val rewritten = rewriteHtml(raw)
+                        WebResourceResponse("text/html", "UTF-8", ByteArrayInputStream(rewritten.toByteArray(Charsets.UTF_8)))
+                    } else {
+                        WebResourceResponse(guessMime(assetPath), "UTF-8", assets.open(assetPath))
+                    }
                 } catch (e: Exception) {
                     super.shouldInterceptRequest(view, url)
                 }
@@ -237,6 +289,16 @@ class MainActivity : AppCompatActivity() {
                         } catch (_: Exception) {
                             Toast.makeText(this@MainActivity, "Cannot open link", Toast.LENGTH_SHORT).show()
                         }
+                        true
+                    }
+                    // In-app HTML navigation: always serve rewritten page
+                    url.startsWith("file:///android_asset/") &&
+                        (url.contains(".html") || url.endsWith("android_asset/") || url.endsWith("android_asset")) -> {
+                        val name = url.substringAfter("file:///android_asset/")
+                            .substringBefore("?")
+                            .substringBefore("#")
+                            .ifBlank { "index.html" }
+                        loadRewrittenHtml(name)
                         true
                     }
                     else -> false
