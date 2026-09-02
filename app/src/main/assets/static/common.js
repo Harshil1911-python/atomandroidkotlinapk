@@ -17,7 +17,7 @@ function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open('AtomBil
   if(!d.objectStoreNames.contains('quotations'))d.createObjectStore('quotations',{keyPath:'id',autoIncrement:true});
   if(!d.objectStoreNames.contains('pricelists'))d.createObjectStore('pricelists',{keyPath:'id',autoIncrement:true});
   if(!d.objectStoreNames.contains('inventoryLogs'))d.createObjectStore('inventoryLogs',{keyPath:'id',autoIncrement:true});
-};r.onsuccess=e=>{db=e.target.result;res(db)};r.onerror=e=>rej(e.target.error)})}
+};r.onsuccess=e=>{db=e.target.result;res(db)};r.onerror=e=>rej(e.target.error)});
 const all=s=>new Promise((res,rej)=>{const t=db.transaction(s,'readonly').objectStore(s).getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error)});
 const put=(s,d)=>new Promise((res,rej)=>{const t=db.transaction(s,'readwrite').objectStore(s).put(d);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error)});
 const del=(s,id)=>new Promise((res,rej)=>{const t=db.transaction(s,'readwrite').objectStore(s).delete(id);t.onsuccess=()=>res();t.onerror=()=>rej(t.error)});
@@ -83,7 +83,7 @@ function initShell(){
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;const b=$('#installBanner');b&&b.classList.add('show')});
   const ib=$('#btnInstallPwa');
   if(ib)ib.onclick=async()=>{if(!deferred){toast('Use browser menu: Install app');return}$('#installBanner').classList.remove('show');deferred.prompt();await deferred.userChoice;deferred=null};
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('static/sw.js').catch(()=>{});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)closeShell()});
 }
 
@@ -114,7 +114,7 @@ function logSession(panel){
 
 function playBeep(){
   try{
-    const a=playBeep._a||(playBeep._a=new Audio('/static/sounds/beep.mp3'));
+    const a=playBeep._a||(playBeep._a=new Audio('static/sounds/beep.mp3'));
     a.currentTime=0;a.volume=1;a.play().catch(()=>{});
   }catch(e){
     try{
@@ -171,6 +171,12 @@ async function renderInvoicePng(tx){
   return c.toDataURL('image/png');
 }
 async function sharePngDataUrl(dataUrl,filename){
+  try{
+    if(window.AndroidBridge&&dataUrl){
+      AndroidBridge.saveBase64AndShare(dataUrl,filename||'invoice.png','image/png');
+      return true;
+    }
+  }catch(e){}
   try{
     const res=await fetch(dataUrl);const blob=await res.blob();
     const file=new File([blob],filename||'invoice.png',{type:'image/png'});
