@@ -131,6 +131,22 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 progressBar.visibility = View.VISIBLE
+                // Inject $ / $$ polyfill ASAP so inline scripts never see "$$ is not defined"
+                view?.evaluateJavascript(
+                    """
+                    (function(){
+                      if (typeof window.$ !== 'function') {
+                        window.$ = function(s){ return document.querySelector(s); };
+                      }
+                      if (typeof window.$$ !== 'function') {
+                        window.$$ = function(s){ return document.querySelectorAll(s); };
+                      }
+                      window.isAndroidApp = true;
+                      window.AndroidBridgeReady = true;
+                    })();
+                    """.trimIndent(),
+                    null
+                )
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
@@ -140,6 +156,12 @@ class MainActivity : AppCompatActivity() {
                     (function(){
                       window.isAndroidApp = true;
                       window.AndroidBridgeReady = true;
+                      if (typeof window.$ !== 'function') {
+                        window.$ = function(s){ return document.querySelector(s); };
+                      }
+                      if (typeof window.$$ !== 'function') {
+                        window.$$ = function(s){ return document.querySelectorAll(s); };
+                      }
                       if (window.AndroidBridge && !window.__atomSharePatched) {
                         window.__atomSharePatched = true;
                         var origShare = window.sharePngDataUrl;
@@ -158,6 +180,51 @@ class MainActivity : AppCompatActivity() {
                     """.trimIndent(),
                     null
                 )
+            }
+
+            /**
+             * Strip ?v=20 (and any query / fragment) from file:///android_asset/ URLs so
+             * common.js?v=20 and common.css?v=20 load correctly from assets.
+             */
+            override fun shouldInterceptRequest(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): WebResourceResponse? {
+                val uri = request?.url ?: return super.shouldInterceptRequest(view, request)
+                if (uri.scheme != "file") return super.shouldInterceptRequest(view, request)
+                val path = uri.path ?: return super.shouldInterceptRequest(view, request)
+                // Only handle android_asset paths that have a query (e.g. ?v=20)
+                if (!path.contains("/android_asset/") || (uri.query.isNullOrEmpty() && uri.fragment.isNullOrEmpty())) {
+                    return super.shouldInterceptRequest(view, request)
+                }
+                return try {
+                    val assetPath = path.substringAfter("/android_asset/")
+                    val cleanPath = assetPath.substringBefore("?").substringBefore("#")
+                    val mime = guessMime(cleanPath)
+                    val stream = assets.open(cleanPath)
+                    WebResourceResponse(mime, "UTF-8", stream)
+                } catch (e: Exception) {
+                    android.util.Log.w("AtomBills", "Asset intercept failed for $uri: ${e.message}")
+                    super.shouldInterceptRequest(view, request)
+                }
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun shouldInterceptRequest(view: WebView?, url: String?): WebResourceResponse? {
+                if (url == null || !url.startsWith("file://") || !url.contains("?")) {
+                    return super.shouldInterceptRequest(view, url)
+                }
+                return try {
+                    val path = Uri.parse(url).path ?: return super.shouldInterceptRequest(view, url)
+                    if (!path.contains("/android_asset/")) return super.shouldInterceptRequest(view, url)
+                    val assetPath = path.substringAfter("/android_asset/")
+                    val cleanPath = assetPath.substringBefore("?").substringBefore("#")
+                    val mime = guessMime(cleanPath)
+                    val stream = assets.open(cleanPath)
+                    WebResourceResponse(mime, "UTF-8", stream)
+                } catch (e: Exception) {
+                    super.shouldInterceptRequest(view, url)
+                }
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -279,6 +346,20 @@ class MainActivity : AppCompatActivity() {
 
         webView.isFocusable = true
         webView.isFocusableInTouchMode = true
+    }
+
+    private fun guessMime(path: String): String = when {
+        path.endsWith(".js", true) -> "application/javascript"
+        path.endsWith(".css", true) -> "text/css"
+        path.endsWith(".html", true) || path.endsWith(".htm", true) -> "text/html"
+        path.endsWith(".png", true) -> "image/png"
+        path.endsWith(".jpg", true) || path.endsWith(".jpeg", true) -> "image/jpeg"
+        path.endsWith(".svg", true) -> "image/svg+xml"
+        path.endsWith(".json", true) || path.endsWith(".webmanifest", true) -> "application/json"
+        path.endsWith(".mp3", true) -> "audio/mpeg"
+        path.endsWith(".woff2", true) -> "font/woff2"
+        path.endsWith(".woff", true) -> "font/woff"
+        else -> "application/octet-stream"
     }
 
     private fun expandMimeTypes(accept: List<String>): Array<String> {
