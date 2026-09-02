@@ -1,4 +1,5 @@
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+window.$=$;window.$$=$$;
 const toast=(m,t=1800)=>{const e=$('#toast');if(!e)return;e.textContent=m;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),t)};
 const fmt=n=>'₹'+Number(n||0).toLocaleString('en-IN');
 const COLORS=['#dbeafe','#dcfce7','#fef3c7','#fce7f3','#e0e7ff','#ffedd5','#f3e8ff','#ecfdf5'];
