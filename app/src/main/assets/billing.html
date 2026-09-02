@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Atom Bills">
+<link rel="manifest" href="static/manifest.webmanifest">
+<link rel="apple-touch-icon" href="static/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="static/icon-192.png">
+<title>Atom Bills</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/common.css?v=20">
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <img class="logo" src="static/logo.png" alt="Atom Bills" style="height:40px;width:auto">
+  <div class="top-r">
+    <button class="ib" id="btnCalc" aria-label="Calculator"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="10" y2="18"/><line x1="14" y1="18" x2="16" y2="18"/></svg></button>
+    <button class="ib" id="btnMenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
+  </div>
+</header>
+<div class="ov" id="ov"></div>
+<aside class="dr" id="dr">
+  <div class="dh">
+    <img class="dh-logo" src="static/logo-white.png" alt="Atom Bills">
+    <div class="dh-text"><p>Advance Transactions &amp; Operations Management</p></div>
+  </div>
+  <div class="db" id="drawerBody"></div>
+</aside>
+<div class="col">
+  <div class="view on" id="v-home">
+    <div class="main">
+      <div class="qa-row">
+        <button class="qa ex" id="btnEx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Expiry<span class="cnt" id="exCnt">0</span></button>
+        <button class="qa st" id="btnSt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Out of Stock<span class="cnt" id="stCnt">0</span></button>
+      </div>
+      <section class="sec"><div class="sh"><h2>Recent Transactions</h2></div><div class="txl" id="txList"><div class="empty">No recent transactions yet.</div></div></section>
+    </div>
+  </div>
+  <div class="view" id="v-text">
+    <div class="vhead"><h2>Text POS</h2></div>
+    <div class="tools"><input class="search" id="tsSearch" placeholder="Search products…"><button class="tb" id="tsCat" type="button">Cat</button><button class="tb" id="tsScan" type="button" title="Scan"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg></button><button class="tb" id="tsCustom" type="button" style="background:#0f172a;color:#fff;border-color:#0f172a">+ Item</button></div>
+    <div class="tl" id="tsList"><div class="empty">No products</div></div>
+  </div>
+  <div class="view" id="v-photo">
+    <div class="vhead"><h2>Photo POS</h2></div>
+    <div class="tools"><input class="search" id="psSearch" placeholder="Search products…"><button class="tb" id="psCat" type="button">Cat</button><button class="tb" id="psScan" type="button" title="Scan"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg></button><button class="tb" id="psCustom" type="button" style="background:#0f172a;color:#fff;border-color:#0f172a">+ Item</button></div>
+    <div class="pg" id="psGrid"></div>
+  </div>
+  <div class="view" id="v-held">
+    <div class="vhead"><h2>Held Bills</h2></div>
+    <div class="tl" id="heldList"><div class="empty">No held bills</div></div>
+  </div>
+  <div class="view" id="v-cart">
+    <div class="vhead" style="text-align:center"><h2 style="font-size:22px;font-weight:800;letter-spacing:-.02em">Cart</h2></div>
+    <div class="tl" id="cartList"><div class="empty">Cart is empty</div></div>
+  </div>
+  <div class="bar cart-bar" id="cartBar" style="display:none">
+    <div class="ci"><b id="cartTotal">₹0</b><span id="cartCount">0 items</span></div>
+    <button class="clear" id="btnClear">Clear</button>
+    <button class="hold" id="btnHold">Hold</button>
+    <button class="go" id="btnCheckout">Checkout</button>
+  </div>
+  <div class="bar" id="fabWrap">
+    <button class="ab rec hid" id="btnScanFab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Scan</button>
+    <button class="ab pl" id="btnPlus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    <button class="ab bil hid" id="btnBil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>+ Bill</button>
+  </div>
+  <nav class="bn">
+    <button class="nav on" data-v="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home<span class="ind"></span></button>
+    <button class="nav" data-v="text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Text POS<span class="ind"></span></button>
+    <button class="nav" data-v="photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Photo POS<span class="ind"></span></button>
+    <button class="nav" data-v="cart" id="navCart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Cart<span class="ind"></span></button>
+  </nav>
+</div>
+
+<div class="sheet-ov" id="sheetOv"></div>
+<div class="sheet" id="sheetMore" style="height:72%;max-height:560px">
+  <div class="sheet-h"><h3>More actions</h3><button type="button" id="sheetMoreX">×</button></div>
+  <div class="sheet-b" id="sheetMoreB">
+    <div class="act-shift"><div><b>Shift</b><small id="shiftStatus">Closed</small></div><button type="button" class="sw" id="btnShift"><i></i></button></div>
+    <div class="act-section">Returns</div>
+    <div class="act-grid">
+      <button type="button" class="act-ico" data-act="saleret"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></div><span>Sales Returns</span></button>
+      <button type="button" class="act-ico" data-act="purret"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div><span>Purchase Returns</span></button>
+    </div>
+    <div class="act-section">Payments</div>
+    <div class="act-grid">
+      <button type="button" class="act-ico" data-act="payin"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span>Received Payment</span></button>
+      <button type="button" class="act-ico" data-act="payout"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><span>Make Payments</span></button>
+    </div>
+    <div class="act-section">Others</div>
+    <div class="act-grid">
+      <button type="button" class="act-ico" data-act="quote"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><span>Quotation</span></button>
+      <button type="button" class="act-ico" data-act="expense"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div><span>Expense</span></button>
+      <button type="button" class="act-ico" data-act="purchase"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div><span>Purchase</span></button>
+      <button type="button" class="act-ico" data-act="party"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><span>Parties</span></button>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="sheetEx"><div class="sheet-h"><h3>Expiring Soon</h3><button id="sheetExX">×</button></div><div class="sheet-b" id="sheetExB"></div></div>
+<div class="sheet" id="sheetCat"><div class="sheet-h"><h3>Category</h3><button type="button" id="sheetCatX">×</button></div><div class="sheet-b" id="sheetCatB"></div></div>
+<div class="sheet" id="sheetSt"><div class="sheet-h"><h3>Out of Stock</h3><button id="sheetStX">×</button></div><div class="sheet-b" id="sheetStB"></div></div>
+
+<div class="modal" id="scanM" style="display:none;position:absolute;inset:0;z-index:200;background:rgba(15,23,42,.5);align-items:flex-end;justify-content:center">
+  <div style="background:#fff;width:100%;max-width:480px;height:94%;border-radius:16px 16px 0 0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;font-weight:700">
+      <span>Scan</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button type="button" id="scanTorch" title="Flash" style="border:0;background:#fef3c7;color:#b45309;width:36px;height:32px;border-radius:8px;font-size:16px;font-weight:700;font-family:inherit">⚡</button>
+        <button type="button" id="scanFlip" style="border:0;background:#eef2ff;color:#4f46e5;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit">Flip</button>
+        <button type="button" id="scanX" style="border:0;background:0;font-size:20px">×</button>
+      </div>
+    </div>
+    <div style="position:relative;background:#111;height:38%;min-height:140px;flex-shrink:0">
+      <video id="scanVid" playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+      <div style="position:absolute;left:50%;top:50%;width:72%;max-width:260px;aspect-ratio:2.2;transform:translate(-50%,-50%);border:2px solid #22c55e;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.12);pointer-events:none"></div>
+      <p id="scanHint" style="position:absolute;left:0;right:0;bottom:8px;margin:0;text-align:center;font-size:11px;font-weight:600;color:#fff;text-shadow:0 1px 4px #000">Point at barcode</p>
+    </div>
+    <div style="padding:12px 14px 4px;display:flex;justify-content:space-between;align-items:center">
+      <b style="font-size:15px">Cart Items</b>
+      <span style="font-size:13px;font-weight:700;color:#4f46e5" id="scanCartMeta">0 items</span>
+    </div>
+    <div id="scanCartList" style="flex:1;min-height:0;overflow:auto;padding:4px 14px 8px"></div>
+    <div style="padding:8px 14px;border-top:1px solid #f1f5f9;font-size:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:#64748b">Subtotal</span><span id="scanSub">₹0</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:800;font-size:16px"><span>Total Payable</span><span id="scanCartTotal" style="color:#4f46e5">₹0</span></div>
+    </div>
+    <div style="padding:10px 12px 14px;background:#f8fafc;flex-shrink:0">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="scanManual" placeholder="Enter barcode manually" style="flex:1;padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit">
+        <button type="button" id="scanGo" style="padding:11px 14px;border:0;border-radius:10px;background:#4f46e5;color:#fff;font-weight:700;font-family:inherit">Add</button>
+      </div>
+      <button type="button" id="scanDone" style="width:100%;padding:13px;border:0;border-radius:12px;background:#0f172a;color:#fff;font-weight:800;font-size:14px;font-family:inherit">Done · Checkout</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="customM" style="display:none;position:absolute;inset:0;z-index:210;background:rgba(15,23,42,.5);align-items:center;justify-content:center">
+  <div style="background:#fff;width:92%;max-width:340px;border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.25)">
+    <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;font-weight:700">Custom item <button type="button" id="customX" style="border:0;background:0;font-size:20px">×</button></div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <label style="font-size:12px;font-weight:600;color:#64748b">Name *</label>
+      <input id="ciName" placeholder="Item name" style="padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:12px;font-weight:600;color:#64748b">Price *</label><input id="ciPrice" type="number" min="0" step="0.01" placeholder="0" style="width:100%;padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit"></div>
+        <div><label style="font-size:12px;font-weight:600;color:#64748b">Qty</label><input id="ciQty" type="number" min="1" value="1" style="width:100%;padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit"></div>
+      </div>
+      <label style="font-size:12px;font-weight:600;color:#64748b">Tax %</label>
+      <input id="ciTax" type="number" min="0" step="0.01" placeholder="0" style="padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit">
+      <button type="button" id="ciAdd" style="margin-top:6px;padding:13px;border:0;border-radius:12px;background:#4f46e5;color:#fff;font-weight:700;font-size:14px;font-family:inherit">Add to cart</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="coChoiceM" style="display:none;position:absolute;inset:0;z-index:210;background:rgba(15,23,42,.45);align-items:center;justify-content:center">
+  <div style="background:#fff;width:88%;max-width:320px;border-radius:18px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.25)">
+    <h3 style="font-size:17px;font-weight:800;margin-bottom:14px;text-align:center">Continue</h3>
+    <button type="button" id="coGoCart" style="width:100%;padding:14px;border:0;border-radius:12px;background:#eef2ff;color:#4f46e5;font-weight:800;font-size:15px;font-family:inherit;margin-bottom:10px">Cart</button>
+    <button type="button" id="coGoCheck" style="width:100%;padding:14px;border:0;border-radius:12px;background:#4f46e5;color:#fff;font-weight:800;font-size:15px;font-family:inherit">Checkout</button>
+    <button type="button" id="coChoiceX" style="width:100%;margin-top:10px;padding:10px;border:0;background:0;color:#64748b;font-weight:600;font-family:inherit">Cancel</button>
+  </div>
+</div>
+<div class="modal" id="coCustM" style="display:none;position:absolute;inset:0;z-index:215;background:rgba(15,23,42,.45);align-items:flex-end;justify-content:center">
+  <div style="background:#fff;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:18px 16px 24px;max-height:85%;overflow:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="font-size:17px;font-weight:800;margin:0">Select customer</h3>
+      <button type="button" id="coCustX" style="border:0;background:#f1f5f9;width:32px;height:32px;border-radius:50%;font-size:18px">×</button></div>
+    <div style="position:relative;margin-bottom:12px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="coCustSearch" placeholder="Search customer…" autocomplete="off" style="flex:1;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;font-size:14px;font-family:inherit">
+        <button type="button" id="coCustAdd" style="width:44px;height:44px;border:0;border-radius:12px;background:#4f46e5;color:#fff;font-size:22px;font-weight:700;font-family:inherit;flex-shrink:0">+</button>
+      </div>
+      <div id="coCustDrop" class="atom-search-dd" style="display:none"></div>
+    </div>
+    <div id="coCustSelected" style="font-size:13px;color:#64748b;margin-bottom:12px">No customer selected (Cash)</div>
+    <div style="background:#f8fafc;border-radius:12px;padding:12px;margin-bottom:12px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:#64748b">Subtotal</span><b id="coSub">₹0</b></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:#64748b">GST</span><b id="coGst">₹0</b></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:#64748b">Discount</span><b id="coDisc" style="color:#dc2626">− ₹0</b></div>
+      <div style="display:flex;justify-content:space-between;font-weight:800;font-size:16px"><span>Total</span><span id="coTot" style="color:#4f46e5">₹0</span></div>
+    </div>
+    <label style="font-size:12px;font-weight:600;color:#64748b">Coupon / discount code</label>
+    <div style="display:flex;gap:8px;margin:6px 0 12px">
+      <input id="coCoupon" placeholder="Enter code" style="flex:1;padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit;text-transform:uppercase">
+      <button type="button" id="coApplyCoupon" style="padding:11px 14px;border:0;border-radius:10px;background:#eef2ff;color:#4f46e5;font-weight:700;font-family:inherit">Apply</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <button type="button" class="payPick on" data-pay="cash" style="padding:10px 6px;border:2px solid #4f46e5;border-radius:10px;background:#eef2ff;font-weight:700;font-size:12px;font-family:inherit">Cash</button>
+      <button type="button" class="payPick" data-pay="bank" style="padding:10px 6px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;font-weight:700;font-size:12px;font-family:inherit">Bank/UPI</button>
+      <button type="button" class="payPick" data-pay="unpaid" style="padding:10px 6px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;font-weight:700;font-size:12px;font-family:inherit">Unpaid</button>
+    </div>
+    <button type="button" id="coCustNext" style="width:100%;padding:14px;border:0;border-radius:12px;background:#0f172a;color:#fff;font-weight:800;font-family:inherit">Create bill</button>
+  </div>
+</div>
+<div class="modal" id="coNewCustM" style="display:none;position:absolute;inset:0;z-index:220;background:rgba(15,23,42,.5);align-items:center;justify-content:center">
+  <div style="background:#fff;width:92%;max-width:340px;border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.25)">
+    <div style="padding:14px 16px;display:flex;justify-content:space-between;font-weight:700;border-bottom:1px solid #e2e8f0">New customer <button type="button" id="coNewCustX" style="border:0;background:0;font-size:20px">×</button></div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <label style="font-size:12px;font-weight:600;color:#64748b">Name *</label>
+      <input id="ncName" style="padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+      <label style="font-size:12px;font-weight:600;color:#64748b">Number</label>
+      <input id="ncPhone" type="tel" style="padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+      <label style="font-size:12px;font-weight:600;color:#64748b">Email</label>
+      <input id="ncEmail" type="email" style="padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+      <label style="font-size:12px;font-weight:600;color:#64748b">Existing udhaar (₹)</label>
+      <input id="ncUdhaar" type="number" min="0" step="0.01" value="0" style="padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+      <button type="button" id="ncSave" style="padding:13px;border:0;border-radius:12px;background:#4f46e5;color:#fff;font-weight:700;font-family:inherit">Save customer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="invPrevM" style="display:none;position:absolute;inset:0;z-index:230;background:rgba(15,23,42,.55);align-items:center;justify-content:center">
+  <div style="background:#fff;width:92%;max-width:360px;border-radius:18px;overflow:hidden;max-height:90%;display:flex;flex-direction:column">
+    <div style="padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;font-weight:700">Invoice <button type="button" id="invPrevX" style="border:0;background:0;font-size:20px">×</button></div>
+    <div style="overflow:auto;padding:12px;background:#f8fafc;flex:1"><img id="invPrevImg" style="width:100%;border-radius:8px;display:block"></div>
+    <div style="padding:12px;display:flex;gap:8px">
+      <button type="button" id="invShare" style="flex:1;padding:12px;border:0;border-radius:12px;background:#4f46e5;color:#fff;font-weight:700;font-family:inherit">Share</button>
+      <button type="button" id="invPrevClose" style="flex:1;padding:12px;border:0;border-radius:12px;background:#f1f5f9;font-weight:700;font-family:inherit">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="actM" style="display:none;position:absolute;inset:0;z-index:220;background:rgba(15,23,42,.45);align-items:center;justify-content:center">
+  <div style="background:#fff;width:92%;max-width:340px;border-radius:18px;overflow:hidden;max-height:90%;display:flex;flex-direction:column">
+    <div style="padding:14px 16px;display:flex;justify-content:space-between;font-weight:700;border-bottom:1px solid #e2e8f0"><span id="actTitle">Action</span><button type="button" id="actX" style="border:0;background:0;font-size:20px">×</button></div>
+    <div id="actBody" style="padding:16px;overflow:auto;display:flex;flex-direction:column;gap:10px"></div>
+    <div style="padding:12px 16px"><button type="button" id="actSave" style="width:100%;padding:13px;border:0;border-radius:12px;background:#4f46e5;color:#fff;font-weight:700;font-family:inherit">Save</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+</div>
+<script src="static/common.js?v=20"></script>
+<script>
+document.addEventListener("contextmenu",e=>e.preventDefault());
+window.onerror=function(m,s,l,c,e){try{console.error(m,s,l);var t=document.getElementById('toast');if(t){t.textContent=String(m).slice(0,80);t.classList.add('on')}}catch(x){}};
+let cart=[],plusOpen=false,currentView='home',sheetOpen=false,drawerOpen=false,shiftActive=false;
+
+function showView(v){
+  currentView=v;
+  $$('.view').forEach(e=>e.classList.remove('on'));
+  const el=$('#v-'+v); if(el) el.classList.add('on');
+  $$('.nav').forEach(n=>n.classList.toggle('on',n.dataset.v===v));
+  const fab=$('#fabWrap'); if(fab) fab.style.display=(v==='home')?'flex':'none';
+  plusOpen=false; const sf=$('#btnScanFab'),bf=$('#btnBil'); if(sf)sf.classList.add('hid'); if(bf)bf.classList.add('hid');
+  if(v==='text') renderText($('#tsSearch')?.value);
+  if(v==='photo') renderPhoto($('#psSearch')?.value);
+  if(v==='held') renderHeld();
+  if(v==='cart') renderCartView();
+  closeSheets(); closeDrawer();
+  renderCartBar();
+}
+$$('.nav').forEach(n=>n.onclick=()=>showView(n.dataset.v));
+$('#btnCalc').onclick=()=>location.href='calculator.html';
+
+function buildDrawer(){
+  $('#drawerBody').innerHTML=panelLinks('billing')+
+    `<button type="button" class="dr-link" id="drHeld"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>Held Bills</button>`;
+  const tog=$('#btnChangePanel'),opts=$('#panelOpts');
+  if(tog)tog.onclick=()=>{opts.classList.toggle('show');tog.classList.toggle('open')};
+  let deferred=null;
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;const b=$('#installBanner');if(b)b.classList.add('show')});
+  const ib=$('#btnInstallPwa');
+  if(ib)ib.onclick=async()=>{if(!deferred){toast('Use browser menu');return}$('#installBanner').classList.remove('show');deferred.prompt();await deferred.userChoice;deferred=null};
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js?v=20').catch(()=>{});
+  const h=$('#drHeld'); if(h)h.onclick=()=>{closeDrawer();showView('held')};
+}
+buildDrawer();
+
+function openSheet(sel){closeSheets();const s=$(sel);if(!s)return;$('#sheetOv').classList.add('on');s.classList.add('on');sheetOpen=true;history.pushState({sheet:1},'',location.pathname)}
+function closeSheets(){$$('.sheet').forEach(s=>s.classList.remove('on'));$('#sheetOv').classList.remove('on');sheetOpen=false}
+$('#sheetOv').onclick=closeSheets;
+['sheetMoreX','sheetExX','sheetStX','sheetCatX'].forEach(id=>{const e=$('#'+id);if(e)e.onclick=closeSheets});
+
+function openDrawer(){$('#dr').classList.add('on');$('#ov').classList.add('on');drawerOpen=true;const tr=$('.top-r');if(tr)tr.style.visibility='hidden';history.pushState({drawer:1},'',location.pathname)}
+function closeDrawer(){$('#dr').classList.remove('on');$('#ov').classList.remove('on');drawerOpen=false;const tr=$('.top-r');if(tr)tr.style.visibility='';$$('.panel-opts').forEach(e=>e.classList.remove('show'));$$('.panel-toggle').forEach(e=>e.classList.remove('open'))}
+$('#btnMenu').onclick=e=>{e.preventDefault();e.stopPropagation();drawerOpen?closeDrawer():openDrawer()};
+$('#ov').onclick=()=>closeDrawer();
+
+window.addEventListener('popstate',()=>{
+  if(sheetOpen){closeSheets();history.pushState({billing:1},'',location.pathname);return}
+  if(drawerOpen){closeDrawer();history.pushState({billing:1},'',location.pathname);return}
+  if(currentView!=='home'){showView('home');history.pushState({billing:1},'',location.pathname)}
+});
+history.replaceState({billing:1},'',location.pathname);
+
+let tx=0,ty=0,tracking=null;
+function startTrack(e,type){const t=e.touches?e.touches[0]:e;tx=t.clientX;ty=t.clientY;tracking=type}
+function moveTrack(e){if(!tracking)return;const t=e.touches?e.touches[0]:e;const dx=t.clientX-tx,dy=t.clientY-ty;
+  if(tracking==='sheet'&&dy>60&&Math.abs(dy)>Math.abs(dx)*1.5){closeSheets();tracking=null}
+  if(tracking==='drawer'&&dx>60&&Math.abs(dx)>Math.abs(dy)*1.5){closeDrawer();tracking=null}}
+function endTrack(){tracking=null}
+$$('.sheet').forEach(s=>{s.addEventListener('touchstart',e=>startTrack(e,'sheet'),{passive:true});s.addEventListener('touchmove',moveTrack,{passive:true});s.addEventListener('touchend',endTrack)});
+const dr=$('#dr');dr.addEventListener('touchstart',e=>startTrack(e,'drawer'),{passive:true});dr.addEventListener('touchmove',moveTrack,{passive:true});dr.addEventListener('touchend',endTrack);
+
+async function openCatSheet(){
+  const list=await all('products');
+  const cats=[...new Set(list.map(p=>(p.cat||'General').trim()).filter(Boolean))].sort();
+  $('#sheetCatB').innerHTML=cats.length?cats.map(c=>`<button type="button" class="sheet-item" data-cat="${c}" style="width:100%;border:0;text-align:left"><div class="sn">${c}</div></button>`).join(''):'<div class="empty" style="font-size:22px;font-weight:800;color:#0f172a">None</div>';
+  $$('#sheetCatB [data-cat]').forEach(b=>b.onclick=()=>{closeSheets();const q=b.dataset.cat;if(currentView==='text'){$('#tsSearch').value=q;renderText(q)}else{$('#psSearch').value=q;renderPhoto(q)}});
+  openSheet('#sheetCat');
+}
+if($('#tsCat'))$('#tsCat').onclick=openCatSheet;
+if($('#psCat'))$('#psCat').onclick=openCatSheet;
+
+let _scanStream=null,_scanLoop=0,_scanBusy=false,_scanLast='',_scanLastAt=0;
+function _bcMatch(p,code){const c=String(code||'').trim();if(!c)return false;const b=String(p.barcode||'');return b===c||b.split(',').map(x=>x.trim()).includes(c)||String(p.sku||'')===c}
+function updateScanCart(){
+  const n=cart.reduce((s,c)=>s+c.qty,0),tot=cart.reduce((s,c)=>s+c.qty*c.price,0);
+  if($('#scanCartMeta'))$('#scanCartMeta').textContent=n+' item'+(n===1?'':'s');
+  if($('#scanCartTotal'))$('#scanCartTotal').textContent=fmt(tot);
+  if($('#scanSub'))$('#scanSub').textContent=fmt(tot);
+  const box=$('#scanCartList');
+  if(!box)return;
+  if(!cart.length){box.innerHTML='<div class="empty">Scan items to add</div>';return}
+  box.innerHTML=cart.map((c,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9">
+    <div style="width:40px;height:40px;border-radius:10px;background:#eef2ff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+    <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">${c.name}</div><div style="font-size:11px;color:#64748b">${fmt(c.price)} each</div></div>
+    <div style="font-weight:800;font-size:14px;margin-right:6px">${fmt(c.qty*c.price)}</div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button type="button" data-i="${i}" data-d="-1" style="width:28px;height:28px;border:0;border-radius:8px;background:#f1f5f9;font-weight:700">−</button>
+      <span style="font-weight:700;min-width:16px;text-align:center">${c.qty}</span>
+      <button type="button" data-i="${i}" data-d="1" style="width:28px;height:28px;border:0;border-radius:8px;background:#eef2ff;color:#4f46e5;font-weight:700">+</button>
+    </div>
+  </div>`).join('');
+  box.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.i,d=+b.dataset.d;
+    cart[i].qty+=d;
+    if(cart[i].qty<=0)cart.splice(i,1);
+    renderCartBar();updateScanCart();
+  });
+}
+async function handleBarcode(code){
+  code=String(code||'').trim();if(!code)return;
+  const now=Date.now();if(code===_scanLast&&now-_scanLastAt<1200)return;_scanLast=code;_scanLastAt=now;
+  const list=await all('products');
+  const p=list.find(x=>_bcMatch(x,code));
+  if(!p){if($('#scanHint'))$('#scanHint').textContent='No product for '+code;toast('No product for '+code);return}
+  const line=cart.find(c=>+c.id===+p.id);if(line)line.qty++;else cart.push({id:p.id,name:p.name,price:+p.price||0,qty:1});
+  if(typeof playBeep==='function')playBeep();
+  renderCartBar();updateScanCart();
+  if($('#scanHint'))$('#scanHint').textContent='Added '+p.name+' — scan next';
+  if($('#scanManual'))$('#scanManual').value='';
+}
+async function stopScan(){
+  _scanLoop=0;
+  if(_scanStream){_scanStream.getTracks().forEach(t=>t.stop());_scanStream=null}
+  const v=$('#scanVid');if(v)v.srcObject=null;
+  const m=$('#scanM');if(m)m.style.display='none';
+}
+let _scanFacing='environment';
+async function startScanCam(){
+  try{
+    if(_scanStream){_scanStream.getTracks().forEach(tr=>tr.stop());_scanStream=null}
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('no cam');
+    const constraints={audio:false,video:{facingMode:{ideal:_scanFacing},width:{ideal:1280},height:{ideal:720},focusMode:'continuous'}};
+    try{_scanStream=await navigator.mediaDevices.getUserMedia(constraints)}catch(e){_scanStream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:_scanFacing}})}
+    const v=$('#scanVid');v.srcObject=_scanStream;await v.play();
+    $('#scanHint').textContent='Point camera at barcode / QR';
+    if('BarcodeDetector' in window){
+      const det=new BarcodeDetector({formats:['ean_13','ean_8','code_128','code_39','upc_a','upc_e','qr_code','itf']});
+      _scanLoop=1;
+      const tick=async()=>{if(!_scanLoop)return;if(!_scanBusy&&v.readyState>=2){_scanBusy=true;try{const codes=await det.detect(v);if(codes&&codes.length&&codes[0].rawValue)await handleBarcode(codes[0].rawValue)}catch(e){}_scanBusy=false}if(_scanLoop)setTimeout(tick,120)};
+      setTimeout(tick,120);
+    }else $('#scanHint').textContent='Live scan needs Chrome/Edge. Type barcode below.';
+  }catch(e){$('#scanHint').textContent='Camera blocked. Type barcode below.'}
+}
+async function openScan(){
+  const m=$('#scanM');if(!m)return;m.style.display='flex';updateScanCart();
+  $('#scanHint').textContent='Starting camera…';
+  _scanFacing='environment';
+  await startScanCam();
+}
+if($('#scanX'))$('#scanX').onclick=()=>stopScan();
+if($('#scanGo'))$('#scanGo').onclick=()=>handleBarcode($('#scanManual').value);
+if($('#scanDone'))$('#scanDone').onclick=async()=>{await stopScan();showView(cart.length?'cart':'text')};
+if($('#scanManual'))$('#scanManual').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();handleBarcode($('#scanManual').value)}};
+
+
+
+let _torchOn=false;
+if($('#scanTorch'))$('#scanTorch').onclick=async()=>{
+  try{
+    const track=_scanStream&&_scanStream.getVideoTracks()[0];
+    if(!track){toast('Camera not ready');return}
+    const caps=track.getCapabilities&&track.getCapabilities();
+    if(!caps||!caps.torch){toast('Torch not supported');return}
+    _torchOn=!_torchOn;
+    await track.applyConstraints({advanced:[{torch:_torchOn}]});
+    $('#scanTorch').style.background=_torchOn?'#fbbf24':'#fef3c7';
+  }catch(e){toast('Torch unavailable')}
+};
+
+if($('#scanFlip'))$('#scanFlip').onclick=async()=>{
+  _scanFacing=_scanFacing==='environment'?'user':'environment';
+  _scanLoop=0;await startScanCam();
+};
+function openCustom(){
+  const m=$('#customM');if(!m)return;
+  $('#ciName').value='';$('#ciPrice').value='';$('#ciQty').value='1';$('#ciTax').value='';
+  m.style.display='flex';
+}
+function closeCustom(){const m=$('#customM');if(m)m.style.display='none'}
+if($('#customX'))$('#customX').onclick=closeCustom;
+if($('#ciAdd'))$('#ciAdd').onclick=()=>{
+  const name=($('#ciName').value||'').trim();
+  const price=+$('#ciPrice').value;const qty=Math.max(1,+$('#ciQty').value||1);const tax=+$('#ciTax').value||0;
+  if(!name||!(price>=0)||isNaN(price)){toast('Name & price required');return}
+  const unit=tax?price*(1+tax/100):price;
+  cart.push({id:'custom_'+Date.now(),name:name+(tax?' (tax '+tax+'%)':''),price:Math.round(unit*100)/100,qty});
+  renderCartBar();closeCustom();toast(name+' added');
+};
+if($('#tsCustom'))$('#tsCustom').onclick=openCustom;
+if($('#psCustom'))$('#psCustom').onclick=openCustom;
+
+if($('#tsScan'))$('#tsScan').onclick=()=>openScan();
+if($('#psScan'))$('#psScan').onclick=()=>openScan();
+if($('#btnScanFab'))$('#btnScanFab').onclick=()=>{plusOpen=false;$('#btnScanFab').classList.add('hid');$('#btnBil').classList.add('hid');openScan()};
+
+$('#btnPlus').onclick=()=>{if(!plusOpen){plusOpen=true;$('#btnScanFab').classList.remove('hid');$('#btnBil').classList.remove('hid')}else{plusOpen=false;$('#btnScanFab').classList.add('hid');$('#btnBil').classList.add('hid');openSheet('#sheetMore')}};
+
+$('#btnBil').onclick=()=>{plusOpen=false;$('#btnScanFab').classList.add('hid');$('#btnBil').classList.add('hid');showView('text');toast('New bill — add items')};
+
+let _actKind='';
+function openAct(kind,title,fields){
+  _actKind=kind;$('#actTitle').textContent=title;
+  $('#actBody').innerHTML=fields;
+  $('#actM').style.display='flex';
+}
+$('#actX').onclick=()=>{$('#actM').style.display='none'};
+async function actAtomSearch(inpId,dropId,store,mapFn){
+  const inp=$(inpId),drop=$(dropId);
+  inp.oninput=async()=>{
+    const q=(inp.value||'').trim().toLowerCase();if(!q){drop.style.display='none';return}
+    const list=await all(store);const f=list.filter(x=>mapFn.filter(x,q)).slice(0,25);
+    drop.innerHTML=f.length?f.map(x=>`<div class="item" data-id="${x.id}"><div><div class="n">${mapFn.label(x)}</div><div class="m">${mapFn.meta(x)}</div></div></div>`).join(''):'<div class="item"><div class="n">No match</div></div>';
+    drop.style.display='block';
+    drop.querySelectorAll('.item[data-id]').forEach(el=>el.onclick=()=>{inp.value=mapFn.label(list.find(i=>+i.id===+el.dataset.id)||{});inp.dataset.id=el.dataset.id;drop.style.display='none'});
+  };
+}
+$$('#sheetMoreB [data-act]').forEach(b=>b.onclick=()=>{
+  closeSheets();
+  const a=b.dataset.act;
+  if(a==='saleret')openAct('saleret','Sales return',`
+    <label style="font-size:12px;font-weight:600;color:#64748b">Product</label>
+    <div style="position:relative"><input id="actProd" placeholder="Search product…" style="width:100%;padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit"><div id="actProdDrop" class="atom-search-dd" style="display:none"></div></div>
+    <label style="font-size:12px;font-weight:600;color:#64748b">Qty</label><input id="actQty" type="number" min="1" value="1" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Amount (₹)</label><input id="actAmt" type="number" min="0" step="0.01" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Note</label><input id="actNote" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">`);
+  else if(a==='purret')openAct('purret','Purchase return',`
+    <label style="font-size:12px;font-weight:600;color:#64748b">Product</label>
+    <div style="position:relative"><input id="actProd" placeholder="Search product…" style="width:100%;padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit"><div id="actProdDrop" class="atom-search-dd" style="display:none"></div></div>
+    <label style="font-size:12px;font-weight:600;color:#64748b">Qty</label><input id="actQty" type="number" min="1" value="1" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Amount (₹)</label><input id="actAmt" type="number" min="0" step="0.01" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Supplier note</label><input id="actNote" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">`);
+  else if(a==='purchase')openAct('purchase','Purchase',`
+    <label style="font-size:12px;font-weight:600;color:#64748b">Product</label>
+    <div style="position:relative"><input id="actProd" placeholder="Search product…" style="width:100%;padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit"><div id="actProdDrop" class="atom-search-dd" style="display:none"></div></div>
+    <label style="font-size:12px;font-weight:600;color:#64748b">Qty</label><input id="actQty" type="number" min="1" value="1" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Cost total (₹)</label><input id="actAmt" type="number" min="0" step="0.01" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Supplier</label><input id="actNote" placeholder="Supplier name" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">`);
+  else if(a==='payin'||a==='payout')openAct(a,a==='payin'?'Received payment':'Make payment',`
+    <label style="font-size:12px;font-weight:600;color:#64748b">Party</label>
+    <div style="position:relative"><input id="actParty" placeholder="Search party…" style="width:100%;padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit"><div id="actPartyDrop" class="atom-search-dd" style="display:none"></div></div>
+    <label style="font-size:12px;font-weight:600;color:#64748b">Amount (₹)</label><input id="actAmt" type="number" min="0" step="0.01" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Mode</label><select id="actMode" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit"><option value="cash">Cash</option><option value="bank">Bank/UPI</option></select>
+    <label style="font-size:12px;font-weight:600;color:#64748b">Note</label><input id="actNote" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">`);
+  else if(a==='expense')openAct('expense','Expense',`
+    <label style="font-size:12px;font-weight:600;color:#64748b">Title</label><input id="actNote" placeholder="Rent, power…" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Amount (₹)</label><input id="actAmt" type="number" min="0" step="0.01" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Mode</label><select id="actMode" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit"><option value="cash">Cash</option><option value="bank">Bank/UPI</option></select>`);
+  else if(a==='quote')openAct('quote','Quotation',`
+    <label style="font-size:12px;font-weight:600;color:#64748b">Customer</label><input id="actNote" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Amount (₹)</label><input id="actAmt" type="number" min="0" step="0.01" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <p style="font-size:12px;color:#64748b">Uses current cart lines if any.</p>`);
+  else if(a==='party')openAct('party','Add party',`
+    <label style="font-size:12px;font-weight:600;color:#64748b">Name *</label><input id="actNote" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Phone</label><input id="actAmt" type="tel" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit">
+    <label style="font-size:12px;font-weight:600;color:#64748b">Type</label><select id="actMode" style="padding:11px;border:1px solid #e2e8f0;border-radius:10px;font-family:inherit"><option value="customer">Customer</option><option value="supplier">Supplier</option></select>`);
+  else toast(a);
+  setTimeout(()=>{
+    if($('#actProd'))actAtomSearch('#actProd','#actProdDrop','products',{filter:(p,q)=>(p.name||'').toLowerCase().includes(q)||String(p.barcode||'').includes(q),label:p=>p.name||'',meta:p=>'Stock '+(p.stock??0)});
+    if($('#actParty'))actAtomSearch('#actParty','#actPartyDrop','parties',{filter:(p,q)=>(p.name||'').toLowerCase().includes(q)||String(p.phone||'').includes(q),label:p=>p.name||'',meta:p=>p.phone||''});
+  },50);
+});
+$('#actSave').onclick=async()=>{
+  const qty=+$('#actQty')?.value||1, amt=+$('#actAmt')?.value||0, note=($('#actNote')?.value||'').trim();
+  const prodId=+$('#actProd')?.dataset?.id||0, partyId=+$('#actParty')?.dataset?.id||0;
+  const mode=$('#actMode')?.value||'cash';
+  if(_actKind==='party'){
+    if(!note)return toast('Name required');
+    await put('parties',{name:note,phone:String(amt||''),type:mode,balance:0});
+    toast('Party saved');$('#actM').style.display='none';return;
+  }
+  if(_actKind==='expense'){
+    if(!amt)return toast('Amount required');
+    await put('finance',{type:'expense',title:note||'Expense',amount:amt,mode,date:new Date().toISOString()});
+    toast('Expense saved');$('#actM').style.display='none';return;
+  }
+  if(_actKind==='payin'||_actKind==='payout'){
+    if(!amt)return toast('Amount required');
+    const title=(_actKind==='payin'?'Payment in':'Payment out')+(note?(' · '+note):'');
+    await put('transactions',{id:'TX'+Date.now(),title,amount:_actKind==='payin'?amt:-amt,status:'paid',date:new Date().toISOString(),payMethod:mode,type:_actKind,partyId:partyId||null});
+    if(partyId){try{const p=await getById('parties',partyId);if(p){p.balance=(p.balance||0)+(_actKind==='payin'?-amt:amt);await put('parties',p)}}catch(e){}}
+    toast('Saved');$('#actM').style.display='none';await renderTx();return;
+  }
+  if(_actKind==='quote'){
+    await put('quotations',{customer:note,amount:amt||cart.reduce((s,c)=>s+c.qty*c.price,0),items:JSON.parse(JSON.stringify(cart)),at:new Date().toISOString()});
+    toast('Quotation saved');$('#actM').style.display='none';return;
+  }
+  if(_actKind==='purchase'||_actKind==='saleret'||_actKind==='purret'){
+    if(!prodId&&!note)return toast('Select product');
+    let prod=prodId?await getById('products',prodId):null;
+    const q=Math.max(1,qty);const total=amt||((prod?(+prod.price||0):0)*q);
+    if(_actKind==='purchase'){
+      await put('purchases',{name:prod?prod.name:note,supplier:note,total,qty:q,productId:prodId||null,date:new Date().toISOString(),status:'done'});
+      if(prod){prod.stock=(prod.stock||0)+q;await put('products',prod);await put('inventoryLogs',{productId:prod.id,name:prod.name,delta:q,reason:'Purchase',at:new Date().toISOString()})}
+      toast('Purchase saved');
+    }else if(_actKind==='saleret'){
+      await put('transactions',{id:'TX'+Date.now(),title:'Sales return'+(prod?(' · '+prod.name):''),amount:total,status:'paid',date:new Date().toISOString(),type:'sale_return',kind:'sales_return',items:prod?[{id:prod.id,name:prod.name,qty:q,price:total/q}]:[]});
+      if(prod){prod.stock=(prod.stock||0)+q;await put('products',prod);await put('inventoryLogs',{productId:prod.id,name:prod.name,delta:q,reason:'Sales return',at:new Date().toISOString()})}
+      try{const s=JSON.parse(localStorage.getItem('atom_shift_data')||'null');if(s&&s.open){s.returns=(s.returns||0)+total;localStorage.setItem('atom_shift_data',JSON.stringify(s))}}catch(e){}
+      toast('Sales return saved');
+    }else{
+      await put('transactions',{id:'TX'+Date.now(),title:'Purchase return'+(prod?(' · '+prod.name):''),amount:total,status:'paid',date:new Date().toISOString(),type:'purchase_return',items:prod?[{id:prod.id,name:prod.name,qty:q,price:total/q}]:[]});
+      if(prod){prod.stock=Math.max(0,(prod.stock||0)-q);await put('products',prod);await put('inventoryLogs',{productId:prod.id,name:prod.name,delta:-q,reason:'Purchase return',at:new Date().toISOString()})}
+      toast('Purchase return saved');
+    }
+    $('#actM').style.display='none';await renderTx();await renderExStCounts();return;
+  }
+};
+
+$('#btnShift').onclick=async()=>{
+  let s=null;try{s=JSON.parse(localStorage.getItem('atom_shift_data')||'null')}catch(e){}
+  if(s&&s.open){
+    s.open=false;s.closedAt=new Date().toISOString();
+    localStorage.setItem('atom_shift_data',JSON.stringify(s));localStorage.setItem('atom_shift','0');
+    const hist=JSON.parse(localStorage.getItem('atom_shifts')||'[]');hist.unshift({...s});localStorage.setItem('atom_shifts',JSON.stringify(hist.slice(0,100)));
+    shiftActive=false;$('#btnShift').classList.remove('on');$('#shiftStatus').textContent='Closed';toast('Shift closed');
+  }else{
+    let opening=0;
+    if(typeof appPrompt==='function'){const v=await appPrompt('Open shift','Opening cash (₹)','0');if(v===null)return;opening=+v||0}
+    localStorage.setItem('atom_shift_data',JSON.stringify({open:true,openedAt:new Date().toISOString(),openingCash:opening,sales:0,cash:0,upi:0,card:0,other:0,returns:0}));
+    localStorage.setItem('atom_shift','1');
+    shiftActive=true;$('#btnShift').classList.add('on');$('#shiftStatus').textContent='Open';toast('Shift opened');
+  }
+};
+try{const s0=JSON.parse(localStorage.getItem('atom_shift_data')||'null');if(s0&&s0.open){shiftActive=true;$('#btnShift').classList.add('on');$('#shiftStatus').textContent='Open'}}catch(e){}
+$('#btnEx').onclick=async()=>{
+  const list=(await all('products')).filter(isExpiringSoon);
+  $('#sheetExB').innerHTML=list.length?list.map(p=>`<div class="sheet-item"><div class="sn" style="flex:1">${p.name}<small>${p.expiry||''} · Qty ${p.stock??0}</small></div><div class="sp">${fmt(p.price)}</div></div>`).join(''):'<div class="empty" style="font-size:22px;font-weight:800;color:#0f172a">None</div>';
+  openSheet('#sheetEx');
+};
+$('#btnSt').onclick=async()=>{const list=(await all('products')).filter(p=>(p.stock||0)<=0);$('#sheetStB').innerHTML=list.length?list.map(p=>`<div class="sheet-item"><div class="sn" style="flex:1">${p.name}<small>${p.cat||'Out of stock'}</small></div><div class="sp">${fmt(p.price)}</div></div>`).join(''):'<div class="empty" style="font-size:22px;font-weight:800;color:#0f172a">None</div>';openSheet('#sheetSt')};
+
+function renderCartView(){
+  const box=$('#cartList');
+  if(!cart.length){box.innerHTML='<div class="empty">Cart is empty</div>';return}
+  box.innerHTML=cart.map((c,i)=>`<div class="ti"><div class="ico" style="background:#eef2ff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><span>${c.name} × ${c.qty}</span><em>${fmt(c.qty*c.price)}</em></div>`).join('');
+}
+function syncCalcCart(){try{localStorage.setItem('atom_calc_cart',JSON.stringify(cart.map(c=>({name:c.name,qty:c.qty,price:c.price}))))}catch(e){}}
+function renderCartBar(){
+  syncCalcCart();
+  const allow=['text','photo','cart'].includes(currentView);
+  const bar=$('#cartBar');
+  if(!allow){if(bar)bar.style.display='none';return}
+  const n=cart.reduce((a,c)=>a+c.qty,0),total=cart.reduce((a,c)=>a+c.qty*c.price,0);
+  if(!n){bar.style.display='none';return}
+  bar.style.display='flex';
+  $('#cartTotal').textContent=fmt(total);
+  $('#cartCount').textContent=n+' item'+(n>1?'s':'');
+}
+$('#btnClear').onclick=async()=>{if(!(await appConfirm('Clear cart','Remove all items?','Clear',true)))return;cart=[];renderCartBar();if(currentView==='cart')renderCartView();toast('Cleared')};
+$('#btnHold').onclick=async()=>{if(!cart.length)return toast('Empty');await put('held',{items:JSON.parse(JSON.stringify(cart)),at:new Date().toISOString(),total:cart.reduce((a,c)=>a+c.qty*c.price,0)});cart=[];renderCartBar();toast('Held')};
+
+function parseExpiry(exp){
+  if(!exp)return null;const parts=String(exp).split(/[-\/]/);
+  if(parts.length!==3)return null;
+  let d;if(parts[0].length===4)d=new Date(+parts[0],+parts[1]-1,+parts[2]);
+  else d=new Date(+parts[2],+parts[1]-1,+parts[0]);
+  return isNaN(d)?null:d;
+}
+function isExpiringSoon(p){
+  const d=parseExpiry(p.expiry);if(!d)return false;
+  const diff=(d-new Date())/864e5;return diff>=0&&diff<=30;
+}
+
+let selectedCustomer=null;
+$('#btnCheckout').onclick=()=>{
+  if(!cart.length)return toast('Cart empty');
+  $('#coChoiceM').style.display='flex';
+};
+$('#coChoiceX').onclick=()=>{$('#coChoiceM').style.display='none'};
+$('#coGoCart').onclick=()=>{$('#coChoiceM').style.display='none';showView('cart')};
+$('#coGoCheck').onclick=()=>{$('#coChoiceM').style.display='none';openCustSelect()};
+let coDiscount=0,coCouponCode='';
+function cartSubGst(){
+  let sub=0,gst=0;
+  cart.forEach(c=>{const line=c.qty*c.price;const t=+(c.tax||0);if(t){const base=line/(1+t/100);sub+=base;gst+=line-base}else sub+=line});
+  return {sub,gst,gross:sub+gst};
+}
+function refreshCoTotals(){
+  const {sub,gst,gross}=cartSubGst();
+  const tot=Math.max(0,gross-coDiscount);
+  if($('#coSub'))$('#coSub').textContent=fmt(sub);
+  if($('#coGst'))$('#coGst').textContent=fmt(gst);
+  if($('#coDisc'))$('#coDisc').textContent='− '+fmt(coDiscount);
+  if($('#coTot'))$('#coTot').textContent=fmt(tot);
+}
+function openCustSelect(){
+  selectedCustomer=null;coDiscount=0;coCouponCode='';
+  $('#coCustSelected').textContent='No customer selected (Cash)';
+  $('#coCustSearch').value='';$('#coCustDrop').style.display='none';$('#coCustDrop').innerHTML='';
+  if($('#coCoupon'))$('#coCoupon').value='';
+  refreshCoTotals();
+  $('#coCustM').style.display='flex';
+}
+$('#coCustX').onclick=()=>{$('#coCustM').style.display='none'};
+async function fillCustDrop(q){
+  const box=$('#coCustDrop');const s=(q||'').trim().toLowerCase();
+  if(!s){box.style.display='none';box.innerHTML='';return}
+  const list=await all('parties');
+  let f=list.filter(p=>(p.type||'customer')!=='supplier'&&((p.name||'').toLowerCase().includes(s)||String(p.phone||'').includes(s)));
+  if(!f.length){box.innerHTML='<div class="item"><div><div class="n">No match</div></div></div>';box.style.display='block';return}
+  box.innerHTML=f.slice(0,30).map(p=>`<div class="item" data-id="${p.id}"><div><div class="n">${p.name||''}</div><div class="m">${p.phone||''}${p.balance?' · Udhaar '+fmt(p.balance):''}</div></div></div>`).join('');
+  box.style.display='block';
+  box.querySelectorAll('.item[data-id]').forEach(el=>el.onclick=async()=>{
+    selectedCustomer=await getById('parties',+el.dataset.id);
+    $('#coCustSearch').value=selectedCustomer.name||'';
+    $('#coCustSelected').textContent=(selectedCustomer.name||'')+(selectedCustomer.phone?' · '+selectedCustomer.phone:'');
+    box.style.display='none';
+  });
+}
+$('#coCustSearch').oninput=e=>fillCustDrop(e.target.value);
+if($('#coApplyCoupon'))$('#coApplyCoupon').onclick=async()=>{
+  const code=($('#coCoupon').value||'').trim().toUpperCase();
+  if(!code){coDiscount=0;coCouponCode='';refreshCoTotals();return}
+  const list=await all('coupons');
+  const c=list.find(x=>(x.code||'').toUpperCase()===code&&x.active!==false);
+  if(!c){toast('Invalid coupon');coDiscount=0;coCouponCode='';refreshCoTotals();return}
+  const {gross}=cartSubGst();
+  if(c.min&&gross<c.min){toast('Min order '+fmt(c.min));return}
+  coDiscount=c.type==='flat'?+c.value:gross*(+c.value)/100;
+  coCouponCode=code;refreshCoTotals();toast('Coupon applied');
+};
+$('#coCustAdd').onclick=()=>{['ncName','ncPhone','ncEmail'].forEach(id=>$('#'+id).value='');$('#ncUdhaar').value='0';$('#coNewCustM').style.display='flex'};
+$('#coNewCustX').onclick=()=>{$('#coNewCustM').style.display='none'};
+$('#ncSave').onclick=async()=>{
+  const name=($('#ncName').value||'').trim();if(!name)return toast('Name required');
+  const id=await put('parties',{name,phone:($('#ncPhone').value||'').trim(),email:($('#ncEmail').value||'').trim(),balance:+$('#ncUdhaar').value||0,type:'customer'});
+  selectedCustomer=await getById('parties',id)||{id,name,phone:$('#ncPhone').value,balance:+$('#ncUdhaar').value||0};
+  $('#coNewCustM').style.display='none';
+  $('#coCustSearch').value=name;
+  $('#coCustSelected').textContent=name;
+  toast('Customer saved');
+};
+
+let coPay='cash';
+$$('.payPick').forEach(b=>b.onclick=()=>{coPay=b.dataset.pay;$$('.payPick').forEach(x=>{x.classList.toggle('on',x===b);x.style.borderColor=x===b?'#4f46e5':'#e2e8f0';x.style.background=x===b?'#eef2ff':'#fff'})});
+let lastInvoiceUrl='';
+async function showInvoicePreview(tx){
+  lastInvoiceUrl=await renderInvoicePng(tx);
+  $('#invPrevImg').src=lastInvoiceUrl;
+  $('#invPrevM').style.display='flex';
+}
+if($('#invPrevX'))$('#invPrevX').onclick=()=>{$('#invPrevM').style.display='none'};
+if($('#invPrevClose'))$('#invPrevClose').onclick=()=>{$('#invPrevM').style.display='none'};
+if($('#invShare'))$('#invShare').onclick=async()=>{if(lastInvoiceUrl)await sharePngDataUrl(lastInvoiceUrl,'invoice-'+(Date.now())+'.png')};
+
+$('#coCustNext').onclick=async()=>{
+  if(!cart.length)return toast('Cart empty');
+  const {sub,gst,gross}=cartSubGst();
+  const total=Math.max(0,gross-coDiscount);
+  const title=selectedCustomer?(selectedCustomer.name||'Customer'):'Cash Sale';
+  const id='TX'+Date.now();
+  const status=coPay==='unpaid'?'unpaid':'paid';
+  const payMethod=coPay==='bank'?'bank':(coPay==='unpaid'?'credit':'cash');
+  const tx={id,title,amount:total,subtotal:Math.round(sub*100)/100,gst:Math.round(gst*100)/100,discount:coDiscount,coupon:coCouponCode||'',status,date:new Date().toISOString(),payMethod,partyId:selectedCustomer?selectedCustomer.id:null,items:JSON.parse(JSON.stringify(cart))};
+  await put('transactions',tx);
+  if(status==='paid'){
+    for(const line of cart){
+      if(!line.id||String(line.id).startsWith('custom_'))continue;
+      try{const p=await getById('products',+line.id);if(p){p.stock=Math.max(0,(p.stock||0)-(+line.qty||0));await put('products',p);await put('inventoryLogs',{productId:p.id,name:p.name,delta:-(+line.qty||0),reason:'Sale '+id,at:new Date().toISOString()})}}catch(e){}
+    }
+    try{
+      const s=JSON.parse(localStorage.getItem('atom_shift_data')||'null');
+      if(s&&s.open){
+        s.sales=(s.sales||0)+total;
+        if(payMethod==='bank')s.upi=(s.upi||0)+total;else s.cash=(s.cash||0)+total;
+        localStorage.setItem('atom_shift_data',JSON.stringify(s));
+      }
+    }catch(e){}
+  }else if(selectedCustomer){
+    try{const party=await getById('parties',selectedCustomer.id);if(party){party.balance=(party.balance||0)+total;await put('parties',party)}}catch(e){}
+  }
+  cart=[];renderCartBar();
+  $('#coCustM').style.display='none';
+  await renderTx();await renderExStCounts();
+  toast('Bill saved · '+fmt(total));
+  await showInvoicePreview(tx);
+  showView('home');
+};
+
+
+
+async function renderText(q){
+  const box=$('#tsList'),list=await all('products');
+  let f=list;const s=(q||'').trim().toLowerCase();
+  if(s)f=f.filter(p=>(p.name||'').toLowerCase().includes(s)||String(p.barcode||'').includes(s)||(p.sku||'').toLowerCase().includes(s));
+  if(!f.length){box.innerHTML='<div class="empty">No products</div>';return}
+  box.innerHTML=f.map(p=>`<div class="ti" data-id="${p.id}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9;cursor:pointer;gap:10px">
+    <div style="min-width:0;flex:1"><div style="font-weight:700;font-size:14px">${p.name||''}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:3px">Tax ${p.tax||0}% · Qty ${p.stock??0}</div></div>
+    <div style="font-weight:800;color:#4f46e5;font-size:15px;flex-shrink:0">${fmt(p.price)}</div>
+  </div>`).join('');
+  $$('#tsList .ti').forEach(el=>el.onclick=()=>{
+    const p=list.find(x=>+x.id===+el.dataset.id);
+    if(p){const line=cart.find(c=>+c.id===+p.id);if(line)line.qty++;else cart.push({id:p.id,name:p.name,price:+p.price||0,qty:1,tax:+p.tax||0});renderCartBar();toast(p.name+' +')}
+  });
+}
+$('#tsSearch').oninput=e=>renderText(e.target.value);
+
+async function renderPhoto(q){
+  const box=$('#psGrid'),list=await all('products');
+  let f=list.slice();
+  const qq=(q||'').trim().toLowerCase();
+  if(qq)f=f.filter(p=>(p.name||'').toLowerCase().includes(qq));
+  if(!f.length){box.innerHTML='<div class="empty" style="grid-column:1/-1;font-size:22px;font-weight:800;color:#0f172a">None</div>';return}
+  box.innerHTML=f.map(p=>`<div class="pc" data-id="${p.id}">${(p.stock||0)<=0?'<div class="oos">OUT</div>':''}<div class="ph">${p.photo?`<img src="${p.photo}">`:`<div class="ico" style="background:${COLORS[p.id%COLORS.length]}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.6"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>`}</div><div class="meta"><div class="pn">${p.name}</div><div class="pp">${fmt(p.price)}</div></div></div>`).join('');
+  $$('#psGrid .pc').forEach(el=>el.onclick=()=>{
+    const p=f.find(x=>+x.id===+el.dataset.id);
+    if(p){const line=cart.find(c=>+c.id===+p.id);if(line)line.qty++;else cart.push({id:p.id,name:p.name,price:+p.price||0,qty:1});renderCartBar();toast(p.name+' +')}
+  });
+}
+$('#psSearch').oninput=e=>renderPhoto(e.target.value);
+
+async function renderHeld(){
+  const list=await all('held'),box=$('#heldList');
+  if(!list.length){box.innerHTML='<div class="empty">No held bills</div>';return}
+  box.innerHTML=list.map(h=>`<div class="held"><div class="hr"><span>${(h.items||[]).length} items</span><span>${fmt(h.total||0)}</span></div><div class="hs">${new Date(h.at).toLocaleString('en-IN')}</div><div class="hbtns"><button class="resume" data-id="${h.id}">Resume</button><button class="del" data-id="${h.id}">Delete</button></div></div>`).join('');
+  $$('#heldList .resume').forEach(b=>b.onclick=async()=>{const h=await getById('held',+b.dataset.id);if(h){cart=h.items||[];renderCartBar();await del('held',h.id);showView('home');toast('Resumed')}});
+  $$('#heldList .del').forEach(b=>b.onclick=async()=>{if(!(await appConfirm('Delete','Delete held bill?','Delete',true)))return;await del('held',+b.dataset.id);renderHeld()});
+}
+async function renderTx(){
+  const list=(await all('transactions')).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,20),box=$('#txList');
+  if(!list.length){box.innerHTML='<div class="empty">No recent transactions yet.</div>';return}
+  box.innerHTML=list.map(t=>`<div class="tx"><div class="txi cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><div class="txb"><div class="txt">${t.title||'Sale'}</div><div class="txs">${t.subtitle||''}</div></div><div class="txr"><div class="txa">${fmt(t.amount)}</div><span class="badge ${t.status==='paid'?'paid':'unpaid'}">${t.status||'paid'}</span></div></div>`).join('');
+}
+async function renderExStCounts(){const list=await all('products');$('#exCnt').textContent=list.filter(isExpiringSoon).length;$('#stCnt').textContent=list.filter(p=>(p.stock||0)<=0).length}
+
+(async()=>{
+  try{
+  await openDB();logSession('billing');
+  await renderTx();await renderExStCounts();renderCartBar();
+  try{
+    const ex=JSON.parse(localStorage.getItem('atom_export_cart')||'[]');
+    if(ex&&ex.length){
+      ex.forEach(it=>{cart.push({id:it.id||('c'+Date.now()),name:it.name||'Item',price:+it.price||0,qty:+it.qty||1})});
+      localStorage.removeItem('atom_export_cart');
+      renderCartBar();
+      if(location.hash==='#cart')showView('cart');
+      toast('Cart imported from calculator');
+    }else if(location.hash==='#cart')showView('cart');
+  }catch(e){console.error(e)}
+  }catch(e){console.error('init',e);if(typeof toast==='function')toast('Init error')}
+})();
+</script>
+</body>
+</html>

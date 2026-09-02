@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AtomBills" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#3B82F6</item>
+        <item name="colorPrimaryVariant">#2563EB</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#34D399</item>
+        <item name="colorOnSecondary">#000000</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Atom Bills</string>
+    <string name="webview_content_description">Atom Bills Point of Sale. Use TalkBack to navigate billing, inventory and reports.</string>
+</resources>

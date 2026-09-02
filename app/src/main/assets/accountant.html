@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="static/manifest.webmanifest">
+<link rel="icon" type="image/png" href="static/icon-192.png">
+<title>Accountant · Atom Bills</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/common.css?v=20">
+<style>
+.scroll{flex:1;overflow-y:auto;padding:14px 16px 24px;min-height:0}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:8px}
+.tabs button{flex:0 0 auto;padding:8px 12px;border:0;border-radius:20px;background:#f1f5f9;font-size:12px;font-weight:700;font-family:inherit;color:#64748b}
+.tabs button.on{background:#4f46e5;color:#fff}
+.book{background:#fff;border-radius:14px;box-shadow:var(--sh);border:1px solid #f1f5f9;overflow:hidden}
+.book table{width:100%;border-collapse:collapse;font-size:12px}
+.book th{text-align:left;padding:10px 8px;background:#f8fafc;font-weight:700;color:#64748b;border-bottom:1px solid #e2e8f0}
+.book td{padding:10px 8px;border-bottom:1px solid #f1f5f9}
+.tot{font-weight:800;background:#eef2ff}
+.pl-row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
+.pl-row.big{font-weight:800;font-size:16px;border-bottom:0;padding-top:16px}
+.neg{color:#dc2626}.pos{color:#059669}
+pre.term{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:12px;font-size:11px;line-height:1.45;overflow:auto;max-height:50vh;white-space:pre;font-family:ui-monospace,monospace}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <img class="logo" src="static/logo.png" alt="Atom Bills" style="height:40px;width:auto">
+  <div class="top-r"><button class="ib" id="btnMenu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button></div>
+</header>
+<div class="ov" id="ov"></div>
+<aside class="dr" id="dr">
+  <div class="dh"><img class="dh-logo" src="static/logo-white.png" alt=""><div class="dh-text"><p>Advance Transactions &amp; Operations Management</p></div></div>
+  <div class="db" id="drawerBody"></div>
+</aside>
+<div class="col">
+  <div class="vhead"><h2 id="pageTitle">P&amp;L Statement</h2><p>Accountant books</p></div>
+  <div class="scroll">
+    <div class="tabs" id="tabs">
+      <button type="button" class="on" data-b="pl">P&amp;L</button>
+      <button type="button" data-b="sales">Sales Book</button>
+      <button type="button" data-b="purchase">Purchase Book</button>
+      <button type="button" data-b="sret">Sales Return</button>
+      <button type="button" data-b="pret">Purchase Return</button>
+      <button type="button" data-b="gstr1">GSTR-1</button>
+      <button type="button" data-b="tax">Tax summary</button>
+      <button type="button" data-b="day">Day book</button>
+    </div>
+    <div id="bookBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+</div>
+<script src="static/common.js?v=20"></script>
+<script>
+document.addEventListener("contextmenu",e=>e.preventDefault());
+let drawerOpen=false;
+function openDrawer(){$('#dr').classList.add('on');$('#ov').classList.add('on');drawerOpen=true;const tr=$('.top-r');if(tr)tr.style.visibility='hidden'}
+function closeDrawer(){$('#dr').classList.remove('on');$('#ov').classList.remove('on');drawerOpen=false;const tr=$('.top-r');if(tr)tr.style.visibility='';$$('.panel-opts').forEach(e=>e.classList.remove('show'));$$('.panel-toggle').forEach(e=>e.classList.remove('open'))}
+$('#btnMenu').onclick=e=>{e.preventDefault();drawerOpen?closeDrawer():openDrawer()};
+$('#ov').onclick=closeDrawer;
+$('#drawerBody').innerHTML=panelLinks('accountant');
+const tog=$('#btnChangePanel'),opts=$('#panelOpts');
+if(tog)tog.onclick=()=>{opts.classList.toggle('show');tog.classList.toggle('open')};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+
+function rows(list,mapFn){
+  if(!list.length)return '<div class="empty" style="padding:24px;text-align:center;font-weight:800">None</div>';
+  return '<div class="book"><table><thead><tr>'+mapFn.head+'</tr></thead><tbody>'+list.map(mapFn.row).join('')+mapFn.foot(list)+'</tbody></table></div>';
+}
+
+async function showBook(b){
+  $$('#tabs button').forEach(x=>x.classList.toggle('on',x.dataset.b===b));
+  const titles={pl:'P&L Statement',sales:'Sales Book',purchase:'Purchase Book',sret:'Sales Return Book',pret:'Purchase Return Book',gstr1:'GSTR-1 JSON',tax:'Tax summary',day:'Day book'};
+  $('#pageTitle').textContent=titles[b]||b;
+  const box=$('#bookBody');
+  const txs=await all('transactions');
+  const purchases=await all('purchases').catch(()=>[]);
+
+  if(b==='pl'){
+    let sales=0,salesRet=0,purch=0,purchRet=0;
+    txs.forEach(t=>{const a=+t.amount||0;if(t.type==='sale_return'||t.kind==='sales_return')salesRet+=Math.abs(a);else if(t.type==='purchase_return')purchRet+=Math.abs(a);else if(t.status!=='unpaid'&&a>0)sales+=a});
+    purchases.forEach(p=>{const a=+(p.total||0);if((p.status||'')!=='cancelled')purch+=a});
+    const gp=sales-salesRet-(purch-purchRet);
+    box.innerHTML=`<div class="book" style="padding:16px">
+      <div class="pl-row"><span>Sales</span><span class="pos">${fmt(sales)}</span></div>
+      <div class="pl-row"><span>Less: Sales returns</span><span class="neg">− ${fmt(salesRet)}</span></div>
+      <div class="pl-row"><span>Net sales</span><b>${fmt(sales-salesRet)}</b></div>
+      <div class="pl-row"><span>Purchases</span><span>${fmt(purch)}</span></div>
+      <div class="pl-row"><span>Less: Purchase returns</span><span class="pos">− ${fmt(purchRet)}</span></div>
+      <div class="pl-row"><span>Net purchases</span><b>${fmt(purch-purchRet)}</b></div>
+      <div class="pl-row big"><span>Gross profit / (loss)</span><span class="${gp>=0?'pos':'neg'}">${fmt(gp)}</span></div>
+    </div>`;
+    return;
+  }
+  if(b==='sales'){
+    const list=txs.filter(t=>t.status!=='return'&&t.type!=='sale_return'&&(+t.amount||0)>0).sort((a,c)=>(c.date||'').localeCompare(a.date||''));
+    box.innerHTML=rows(list,{head:'<th>Date</th><th>Particulars</th><th>Amount</th>',row:t=>`<tr><td>${(t.date||'').slice(0,10)}</td><td>${t.title||'Sale'}</td><td>${fmt(t.amount)}</td></tr>`,foot:L=>`<tr class="tot"><td colspan="2">Total</td><td>${fmt(L.reduce((s,x)=>s+(+x.amount||0),0))}</td></tr>`});
+    return;
+  }
+  if(b==='purchase'){
+    const list=(purchases||[]).slice().sort((a,c)=>(c.date||'').localeCompare(a.date||''));
+    box.innerHTML=rows(list,{head:'<th>Date</th><th>Supplier</th><th>Amount</th>',row:t=>`<tr><td>${(t.date||t.at||'').toString().slice(0,10)}</td><td>${t.supplier||t.name||'Purchase'}</td><td>${fmt(t.total||t.amount||0)}</td></tr>`,foot:L=>`<tr class="tot"><td colspan="2">Total</td><td>${fmt(L.reduce((s,x)=>s+(+(x.total||x.amount)||0),0))}</td></tr>`});
+    return;
+  }
+  if(b==='sret'){
+    const list=txs.filter(t=>t.type==='sale_return'||t.kind==='sales_return');
+    box.innerHTML=rows(list,{head:'<th>Date</th><th>Particulars</th><th>Amount</th>',row:t=>`<tr><td>${(t.date||'').slice(0,10)}</td><td>${t.title||'Sales return'}</td><td class="neg">${fmt(Math.abs(t.amount||0))}</td></tr>`,foot:L=>`<tr class="tot"><td colspan="2">Total</td><td>${fmt(L.reduce((s,x)=>s+Math.abs(+x.amount||0),0))}</td></tr>`});
+    return;
+  }
+  if(b==='pret'){
+    const list=txs.filter(t=>t.type==='purchase_return');
+    box.innerHTML=rows(list,{head:'<th>Date</th><th>Particulars</th><th>Amount</th>',row:t=>`<tr><td>${(t.date||'').slice(0,10)}</td><td>${t.title||'Purchase return'}</td><td>${fmt(Math.abs(t.amount||0))}</td></tr>`,foot:L=>`<tr class="tot"><td colspan="2">Total</td><td>${fmt(L.reduce((s,x)=>s+Math.abs(+x.amount||0),0))}</td></tr>`});
+    return;
+  }
+  if(b==='tax'){
+    let taxable=0,tax=0;
+    txs.forEach(t=>{if(t.status==='unpaid')return;const a=+t.amount||0;if(a<=0)return;const r=+(t.taxRate||0);if(r){taxable+=a/(1+r/100);tax+=a-a/(1+r/100)}else{taxable+=a}});
+    box.innerHTML=`<div class="book" style="padding:16px">
+      <div class="pl-row"><span>Taxable value</span><b>${fmt(taxable)}</b></div>
+      <div class="pl-row"><span>Tax amount</span><b>${fmt(tax)}</b></div>
+      <div class="pl-row big"><span>Gross incl. tax</span><b>${fmt(taxable+tax)}</b></div>
+    </div>`;
+    return;
+  }
+  if(b==='day'){
+    const dayStart=new Date();dayStart.setHours(0,0,0,0);
+    const list=txs.filter(t=>t.date&&new Date(t.date)>=dayStart).sort((a,c)=>(c.date||'').localeCompare(a.date||''));
+    box.innerHTML=rows(list,{head:'<th>Time</th><th>Particulars</th><th>Amount</th>',row:t=>`<tr><td>${(t.date||'').slice(11,19)||'—'}</td><td>${t.title||''}</td><td>${fmt(t.amount)}</td></tr>`,foot:L=>`<tr class="tot"><td colspan="2">Total</td><td>${fmt(L.reduce((s,x)=>s+(+x.amount||0),0))}</td></tr>`});
+    return;
+  }
+  if(b==='gstr1'){
+    const brand=typeof getBrand==='function'?getBrand():{};
+    const b2cs=[];
+    txs.filter(t=>t.status!=='unpaid'&&(+t.amount||0)>0&&t.type!=='sale_return').forEach(t=>{
+      b2cs.push({rt:0,sply_ty:'INTRA',typ:'OE',pos:(brand.state||'27').toString().slice(0,2),txval:+((+t.amount||0)*0.85).toFixed(2),camt:+((+t.amount||0)*0.075).toFixed(2),samt:+((+t.amount||0)*0.075).toFixed(2),iamt:0,csamt:0});
+    });
+    const gstr={gstin:brand.gstin||'',fp:new Date().toISOString().slice(0,7).replace('-',''),gt:0,cur_gt:0,b2cs,doc_issue:{doc_det:[{doc_num:1,doc_typ:'Invoices for outward supply',docs:[{num:txs.length,from:'1',to:String(Math.max(1,txs.length)),totnum:txs.length,cancel:0,net_issue:txs.length}]}]}};
+    const json=JSON.stringify(gstr,null,2);
+    box.innerHTML=`<p style="font-size:12px;color:#64748b;margin-bottom:8px">Copy this JSON for your CA (simplified GSTR-1 style).</p>
+      <pre class="term" id="gstr1json">${json.replace(/</g,'&lt;')}</pre>
+      <button type="button" id="btnCopyGstr" style="margin-top:10px;width:100%;padding:12px;border:0;border-radius:12px;background:#4f46e5;color:#fff;font-weight:700;font-family:inherit">Copy GSTR-1 JSON</button>`;
+    $('#btnCopyGstr').onclick=async()=>{try{await navigator.clipboard.writeText(json);toast('Copied')}catch(e){toast('Copy failed')}};
+  }
+}
+$$('#tabs button').forEach(b=>b.onclick=()=>showBook(b.dataset.b));
+(async()=>{await openDB();logSession('accountant');showBook('pl')})();
+</script>
+</body>
+</html>
