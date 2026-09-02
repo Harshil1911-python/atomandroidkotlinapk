@@ -27,7 +27,6 @@ import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -73,11 +72,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Edge-to-edge with WHITE system bars (battery / status + bottom nav controls)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.WHITE
         window.navigationBarColor = Color.WHITE
-        applyLightSystemBars()
+        setLightSystemBars()
 
         setContentView(R.layout.activity_main)
         webView = findViewById(R.id.webView)
@@ -90,7 +88,8 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         requestNeededPermissions()
 
-        loadRewrittenHtml("index.html")
+        // Simple reliable load — no loadDataWithBaseURL, no full HTML rewrite
+        webView.loadUrl("file:///android_asset/index.html")
 
         ViewCompat.setOnApplyWindowInsetsListener(webView) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -99,8 +98,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Dark icons on white status / nav bars. */
-    private fun applyLightSystemBars() {
+    private fun setLightSystemBars() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.insetsController?.setSystemBarsAppearance(
                 WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
@@ -120,84 +118,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadRewrittenHtml(assetName: String) {
-        try {
-            val raw = assets.open(assetName).bufferedReader().use { it.readText() }
-            val html = rewriteHtml(raw)
-            webView.loadDataWithBaseURL(
-                "file:///android_asset/",
-                html,
-                "text/html",
-                "UTF-8",
-                "file:///android_asset/$assetName"
-            )
-        } catch (e: Exception) {
-            android.util.Log.e("AtomBills", "loadRewrittenHtml failed: ${e.message}")
-            webView.loadUrl("file:///android_asset/$assetName")
-        }
-    }
-
-    /**
-     * Strip cache-buster queries and inject $ / $$ BEFORE any page script.
-     * Uses bracket notation so Kotlin string templates never corrupt the JS.
-     */
-    private fun rewriteHtml(raw: String): String {
-        var html = raw.replace(Regex("""\?v=\d+"""), "")
-        // Avoid Kotlin $ interpolation entirely: build selectors via String.fromCharCode(36) == '$'
-        val polyfill = """
-            <script>
+    /** Safe JS: defines window.$ and window.$$ without Kotlin $ template issues. */
+    private fun injectHelpers(view: WebView?) {
+        view?.evaluateJavascript(
+            """
             (function(){
-              var d = String.fromCharCode(36);
-              var w = window;
-              if (typeof w[d] !== 'function') {
-                w[d] = function(s){ return document.querySelector(s); };
-              }
-              if (typeof w[d+d] !== 'function') {
-                w[d+d] = function(s){ return document.querySelectorAll(s); };
-              }
-              w.isAndroidApp = true;
-              w.AndroidBridgeReady = true;
-            })();
-            </script>
-            """.trimIndent()
-        html = if (html.contains("<head>", ignoreCase = true)) {
-            html.replaceFirst(Regex("(?i)<head>"), "<head>$polyfill")
-        } else {
-            polyfill + html
-        }
-        return html
-    }
-
-    private fun polyfillJs(): String {
-        // Same safe technique for evaluateJavascript
-        return """
-            (function(){
-              var d = String.fromCharCode(36);
-              var w = window;
-              if (typeof w[d] !== 'function') {
-                w[d] = function(s){ return document.querySelector(s); };
-              }
-              if (typeof w[d+d] !== 'function') {
-                w[d+d] = function(s){ return document.querySelectorAll(s); };
-              }
-              w.isAndroidApp = true;
-              w.AndroidBridgeReady = true;
-              if (w.AndroidBridge && !w.__atomSharePatched) {
-                w.__atomSharePatched = true;
-                var origShare = w.sharePngDataUrl;
-                w.sharePngDataUrl = async function(dataUrl, filename) {
-                  try {
-                    if (w.AndroidBridge && dataUrl) {
-                      AndroidBridge.saveBase64AndShare(dataUrl, filename || 'invoice.png', 'image/png');
-                      return true;
-                    }
-                  } catch (e) {}
-                  if (typeof origShare === 'function') return origShare(dataUrl, filename);
+              var d=String.fromCharCode(36);
+              if(typeof window[d]!=='function')window[d]=function(s){return document.querySelector(s)};
+              if(typeof window[d+d]!=='function')window[d+d]=function(s){return document.querySelectorAll(s)};
+              window.isAndroidApp=true;
+              window.AndroidBridgeReady=true;
+              if(window.AndroidBridge&&!window.__atomSharePatched){
+                window.__atomSharePatched=true;
+                var o=window.sharePngDataUrl;
+                window.sharePngDataUrl=async function(u,f){
+                  try{if(window.AndroidBridge&&u){AndroidBridge.saveBase64AndShare(u,f||'invoice.png','image/png');return true}}catch(e){}
+                  if(typeof o==='function')return o(u,f);
                   return false;
                 };
               }
             })();
-            """.trimIndent()
+            """.trimIndent(),
+            null
+        )
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -209,7 +152,7 @@ class MainActivity : AppCompatActivity() {
         s.allowFileAccess = true
         s.allowContentAccess = true
         s.mediaPlaybackRequiresUserGesture = false
-        s.cacheMode = WebSettings.LOAD_NO_CACHE
+        s.cacheMode = WebSettings.LOAD_DEFAULT
         s.useWideViewPort = true
         s.loadWithOverviewMode = true
         s.setSupportZoom(false)
@@ -222,7 +165,7 @@ class MainActivity : AppCompatActivity() {
         s.allowUniversalAccessFromFileURLs = true
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            s.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            s.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             s.safeBrowsingEnabled = false
@@ -238,103 +181,65 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 progressBar.visibility = View.VISIBLE
-                view?.evaluateJavascript(polyfillJs(), null)
+                injectHelpers(view)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 progressBar.visibility = View.GONE
-                view?.evaluateJavascript(polyfillJs(), null)
+                injectHelpers(view)
             }
 
+            /**
+             * Only intercept when the URL has ?v=… so common.js?v=20 maps to the real asset.
+             * Do NOT rewrite every HTML page (that was hanging the app).
+             */
             override fun shouldInterceptRequest(
                 view: WebView?,
                 request: WebResourceRequest?
             ): WebResourceResponse? {
-                val uri = request?.url ?: return super.shouldInterceptRequest(view, request)
-                if (uri.scheme != "file") return super.shouldInterceptRequest(view, request)
-                val path = uri.path ?: return super.shouldInterceptRequest(view, request)
-                if (!path.contains("/android_asset/")) return super.shouldInterceptRequest(view, request)
+                val uri = request?.url ?: return null
+                if (uri.scheme != "file") return null
+                if (uri.query.isNullOrEmpty()) return null
+                val path = uri.path ?: return null
+                if (!path.contains("/android_asset/")) return null
 
                 val assetPath = path.substringAfter("/android_asset/")
                     .substringBefore("?")
                     .substringBefore("#")
-                if (assetPath.isBlank()) return super.shouldInterceptRequest(view, request)
+                if (assetPath.isBlank()) return null
 
                 return try {
-                    if (assetPath.endsWith(".html", true) || assetPath.endsWith(".htm", true)) {
-                        val raw = assets.open(assetPath).bufferedReader().use { it.readText() }
-                        val rewritten = rewriteHtml(raw)
-                        WebResourceResponse(
-                            "text/html",
-                            "UTF-8",
-                            ByteArrayInputStream(rewritten.toByteArray(Charsets.UTF_8))
-                        )
-                    } else {
-                        val mime = guessMime(assetPath)
-                        WebResourceResponse(mime, "UTF-8", assets.open(assetPath))
-                    }
+                    val mime = guessMime(assetPath)
+                    val stream = assets.open(assetPath)
+                    // null encoding for binary; UTF-8 only for text
+                    val encoding = if (mime.startsWith("text") || mime.contains("javascript") || mime.contains("json")) "UTF-8" else null
+                    WebResourceResponse(mime, encoding, stream)
                 } catch (e: Exception) {
-                    android.util.Log.w("AtomBills", "Asset intercept failed for $uri ($assetPath): ${e.message}")
-                    super.shouldInterceptRequest(view, request)
-                }
-            }
-
-            @Deprecated("Deprecated in Java")
-            override fun shouldInterceptRequest(view: WebView?, url: String?): WebResourceResponse? {
-                if (url == null || !url.startsWith("file://")) {
-                    return super.shouldInterceptRequest(view, url)
-                }
-                val path = Uri.parse(url).path ?: return super.shouldInterceptRequest(view, url)
-                if (!path.contains("/android_asset/")) return super.shouldInterceptRequest(view, url)
-                val assetPath = path.substringAfter("/android_asset/")
-                    .substringBefore("?")
-                    .substringBefore("#")
-                return try {
-                    if (assetPath.endsWith(".html", true)) {
-                        val raw = assets.open(assetPath).bufferedReader().use { it.readText() }
-                        WebResourceResponse(
-                            "text/html",
-                            "UTF-8",
-                            ByteArrayInputStream(rewriteHtml(raw).toByteArray(Charsets.UTF_8))
-                        )
-                    } else {
-                        WebResourceResponse(guessMime(assetPath), "UTF-8", assets.open(assetPath))
-                    }
-                } catch (e: Exception) {
-                    super.shouldInterceptRequest(view, url)
+                    android.util.Log.w("AtomBills", "Miss asset $assetPath: ${e.message}")
+                    null
                 }
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
-                return when {
-                    url.startsWith("tel:") || url.startsWith("mailto:") ||
-                    url.startsWith("whatsapp:") || url.startsWith("sms:") -> {
-                        try {
-                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        } catch (_: Exception) {
-                            Toast.makeText(this@MainActivity, "Cannot open link", Toast.LENGTH_SHORT).show()
-                        }
-                        true
+                if (url.startsWith("tel:") || url.startsWith("mailto:") ||
+                    url.startsWith("whatsapp:") || url.startsWith("sms:")
+                ) {
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    } catch (_: Exception) {
+                        Toast.makeText(this@MainActivity, "Cannot open link", Toast.LENGTH_SHORT).show()
                     }
-                    url.startsWith("file:///android_asset/") &&
-                        (url.contains(".html") || url.endsWith("android_asset/") || url.endsWith("android_asset")) -> {
-                        val name = url.substringAfter("file:///android_asset/")
-                            .substringBefore("?")
-                            .substringBefore("#")
-                            .ifBlank { "index.html" }
-                        loadRewrittenHtml(name)
-                        true
-                    }
-                    else -> false
+                    return true
                 }
+                return false
             }
         }
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 progressBar.progress = newProgress
-                progressBar.visibility = if (newProgress == 100) View.GONE else View.VISIBLE
+                progressBar.visibility = if (newProgress >= 100) View.GONE else View.VISIBLE
             }
 
             override fun onShowFileChooser(
@@ -347,65 +252,61 @@ class MainActivity : AppCompatActivity() {
                 cameraPhotoUri = null
 
                 val acceptTypes = fileChooserParams?.acceptTypes?.filter { it.isNotBlank() } ?: emptyList()
-                val isImageOnly = acceptTypes.isNotEmpty() && acceptTypes.all { t ->
-                    t.contains("image", ignoreCase = true) || t.startsWith("image/")
+                val isImageOnly = acceptTypes.isNotEmpty() && acceptTypes.all {
+                    it.contains("image", true) || it.startsWith("image/")
                 }
-                val wantsSpreadsheetOrText = acceptTypes.any {
+                val wantsDoc = acceptTypes.any {
                     it.contains("xlsx", true) || it.contains("xls", true) ||
-                    it.contains("csv", true) || it.contains("txt", true) ||
-                    it.contains("json", true) || it.contains("sheet", true) ||
-                    it.contains("plain", true)
+                        it.contains("csv", true) || it.contains("txt", true) ||
+                        it.contains("json", true) || it.contains("sheet", true) ||
+                        it.contains("plain", true)
                 }
                 val isCapture = fileChooserParams?.isCaptureEnabled == true
-                val allowMultiple = fileChooserParams?.mode == FileChooserParams.MODE_OPEN_MULTIPLE
+                val multi = fileChooserParams?.mode == FileChooserParams.MODE_OPEN_MULTIPLE
 
-                val openIntent = if (wantsSpreadsheetOrText || (!isImageOnly && !isCapture)) {
+                val openIntent = if (wantsDoc || (!isImageOnly && !isCapture)) {
                     Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                         addCategory(Intent.CATEGORY_OPENABLE)
                         type = "*/*"
                         if (acceptTypes.isNotEmpty()) {
                             putExtra(Intent.EXTRA_MIME_TYPES, expandMimeTypes(acceptTypes))
                         }
-                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultiple)
+                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multi)
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
                 } else {
                     Intent(Intent.ACTION_GET_CONTENT).apply {
                         addCategory(Intent.CATEGORY_OPENABLE)
                         type = "image/*"
-                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultiple)
+                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multi)
                     }
                 }
 
-                val extraIntents = mutableListOf<Intent>()
-
-                if ((isImageOnly || isCapture) && !wantsSpreadsheetOrText) {
-                    val takePicture = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                    if (takePicture.resolveActivity(packageManager) != null) {
+                val extras = mutableListOf<Intent>()
+                if ((isImageOnly || isCapture) && !wantsDoc) {
+                    val cam = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                    if (cam.resolveActivity(packageManager) != null) {
                         createImageFile()?.let { file ->
                             cameraPhotoUri = FileProvider.getUriForFile(
                                 this@MainActivity, "${packageName}.fileprovider", file
                             )
-                            takePicture.putExtra(MediaStore.EXTRA_OUTPUT, cameraPhotoUri)
-                            extraIntents.add(takePicture)
+                            cam.putExtra(MediaStore.EXTRA_OUTPUT, cameraPhotoUri)
+                            extras.add(cam)
                         }
                     }
                 }
 
-                val chooserTitle = when {
-                    wantsSpreadsheetOrText && acceptTypes.any {
-                        it.contains("xlsx", true) || it.contains("xls", true) || it.contains("sheet", true)
-                    } -> "Select Excel file (.xlsx)"
-                    wantsSpreadsheetOrText -> "Select file"
+                val title = when {
+                    wantsDoc -> "Select file"
                     isCapture || isImageOnly -> "Select photo"
                     else -> "Select file"
                 }
 
                 val chooser = Intent(Intent.ACTION_CHOOSER).apply {
                     putExtra(Intent.EXTRA_INTENT, openIntent)
-                    putExtra(Intent.EXTRA_TITLE, chooserTitle)
-                    if (extraIntents.isNotEmpty()) {
-                        putExtra(Intent.EXTRA_INITIAL_INTENTS, extraIntents.toTypedArray())
+                    putExtra(Intent.EXTRA_TITLE, title)
+                    if (extras.isNotEmpty()) {
+                        putExtra(Intent.EXTRA_INITIAL_INTENTS, extras.toTypedArray())
                     }
                 }
 
@@ -414,7 +315,7 @@ class MainActivity : AppCompatActivity() {
                     true
                 } catch (e: Exception) {
                     this@MainActivity.filePathCallback = null
-                    Toast.makeText(this@MainActivity, "Cannot open file picker: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Cannot open picker", Toast.LENGTH_SHORT).show()
                     false
                 }
             }
@@ -425,7 +326,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onConsoleMessage(msg: ConsoleMessage?): Boolean {
                 msg?.let {
-                    android.util.Log.d("AtomBills", "${it.message()} -- ${it.sourceId()}:${it.lineNumber()}")
+                    android.util.Log.d("AtomBills", "${it.message()} @ ${it.sourceId()}:${it.lineNumber()}")
                 }
                 return true
             }
@@ -444,8 +345,6 @@ class MainActivity : AppCompatActivity() {
         path.endsWith(".svg", true) -> "image/svg+xml"
         path.endsWith(".json", true) || path.endsWith(".webmanifest", true) -> "application/json"
         path.endsWith(".mp3", true) -> "audio/mpeg"
-        path.endsWith(".woff2", true) -> "font/woff2"
-        path.endsWith(".woff", true) -> "font/woff"
         else -> "application/octet-stream"
     }
 
@@ -464,7 +363,6 @@ class MainActivity : AppCompatActivity() {
                 }
                 a.contains("csv", true) -> {
                     out.add("text/csv")
-                    out.add("text/comma-separated-values")
                     out.add("text/plain")
                 }
                 a.contains("txt", true) || a.contains("json", true) || a.contains("plain", true) -> {
@@ -498,7 +396,6 @@ class MainActivity : AppCompatActivity() {
                         mime.contains("pdf") -> "pdf"
                         mime.contains("sheet") || mime.contains("excel") -> "xlsx"
                         mime.contains("csv") -> "csv"
-                        mime.contains("json") || mime.contains("text") -> "txt"
                         else -> "bin"
                     }
                     val name = "atom_${System.currentTimeMillis()}.$ext"
@@ -518,13 +415,12 @@ class MainActivity : AppCompatActivity() {
                         )
                         allowScanningByMediaScanner()
                     }
-                    val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-                    dm.enqueue(request)
+                    (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
                     Toast.makeText(this, "Downloading…", Toast.LENGTH_SHORT).show()
                 }
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "Download failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Download failed", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -539,43 +435,30 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestNeededPermissions() {
         val perms = mutableListOf<String>()
-
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED
-        ) {
-            perms.add(Manifest.permission.CAMERA)
-        }
+        ) perms.add(Manifest.permission.CAMERA)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
                 != PackageManager.PERMISSION_GRANTED
-            ) {
-                perms.add(Manifest.permission.READ_MEDIA_IMAGES)
-            }
+            ) perms.add(Manifest.permission.READ_MEDIA_IMAGES)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED
-            ) {
-                perms.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
+            ) perms.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED
-            ) {
-                perms.add(Manifest.permission.BLUETOOTH_CONNECT)
-            }
+            ) perms.add(Manifest.permission.BLUETOOTH_CONNECT)
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
                 != PackageManager.PERMISSION_GRANTED
-            ) {
-                perms.add(Manifest.permission.BLUETOOTH_SCAN)
-            }
+            ) perms.add(Manifest.permission.BLUETOOTH_SCAN)
         }
 
-        if (perms.isNotEmpty()) {
-            permissionLauncher.launch(perms.toTypedArray())
-        }
+        if (perms.isNotEmpty()) permissionLauncher.launch(perms.toTypedArray())
     }
 
     private fun createImageFile(): File? = try {
@@ -625,7 +508,7 @@ class MainActivity : AppCompatActivity() {
             }
             startActivity(Intent.createChooser(intent, "Share via"))
         } catch (e: Exception) {
-            Toast.makeText(this, "Share failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Share failed", Toast.LENGTH_SHORT).show()
         }
     }
 
